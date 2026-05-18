@@ -43,7 +43,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const ALLOWED_DAYS = [1, 7, 14, 30, 90] as const;
+const RANGE_TO_DAYS = { day: 1, week: 7, month: 30 } as const;
+
+type AnalyticsSearch = { days: number; linkId: string };
+
 export const Route = createFileRoute("/analytics")({
+  validateSearch: (s: Record<string, unknown>): AnalyticsSearch => {
+    let days = 7;
+    const d = s.days;
+    const r = s.range;
+    if (typeof d === "number" && (ALLOWED_DAYS as readonly number[]).includes(d)) {
+      days = d;
+    } else if (typeof d === "string" && /^\d+$/.test(d)) {
+      const n = Number(d);
+      if ((ALLOWED_DAYS as readonly number[]).includes(n)) days = n;
+    } else if (typeof r === "string" && r in RANGE_TO_DAYS) {
+      days = RANGE_TO_DAYS[r as keyof typeof RANGE_TO_DAYS];
+    }
+    const linkId = typeof s.linkId === "string" && s.linkId ? s.linkId : "all";
+    return { days, linkId };
+  },
   beforeLoad: async ({ location }) => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) throw redirect({ to: "/login", search: { redirect: location.href } });
