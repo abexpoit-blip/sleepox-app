@@ -255,6 +255,7 @@ const resolveLink = createServerFn({ method: "POST" })
     // Safe page path — show innocuous content, never reveal destination
     if (suspicious && cfg.suspicious_action === "safe_page") {
       const uaInfoS = parseUA(a.ua);
+      const attrS = attributionFromRequestUrl();
       await supabaseAdmin.from("clicks").insert({
         link_id: link.id,
         ip_address: ip || null,
@@ -267,6 +268,7 @@ const resolveLink = createServerFn({ method: "POST" })
         os: uaInfoS.os,
         browser: uaInfoS.browser,
         variant: null,
+        ...attrS,
       });
       return {
         found: true as const,
