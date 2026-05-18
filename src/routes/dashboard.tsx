@@ -409,7 +409,12 @@ function Dashboard() {
                 </div>
 
                 {/* Total Clicks */}
-                <div className="relative overflow-hidden rounded-2xl border border-border bg-card-gradient p-5 shadow-card">
+                <div
+                  className="relative overflow-hidden rounded-2xl border border-border bg-card-gradient p-5 shadow-card cursor-pointer transition-all hover:border-primary/40 hover:shadow-glow"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate({ to: "/analytics" })}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <MousePointerClick className="h-4 w-4" />
