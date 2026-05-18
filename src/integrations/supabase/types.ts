@@ -121,6 +121,47 @@ export type Database = {
           },
         ]
       }
+      link_destinations: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string | null
+          link_id: string
+          updated_at: string
+          url: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          link_id: string
+          updated_at?: string
+          url: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          link_id?: string
+          updated_at?: string
+          url?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_destinations_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       link_variant_overrides: {
         Row: {
           created_at: string
@@ -158,6 +199,7 @@ export type Database = {
           id: string
           short_code: string
           status: Database["public"]["Enums"]["link_status"]
+          targeting: Json
           title: string | null
           updated_at: string
           user_id: string
@@ -171,6 +213,7 @@ export type Database = {
           id?: string
           short_code: string
           status?: Database["public"]["Enums"]["link_status"]
+          targeting?: Json
           title?: string | null
           updated_at?: string
           user_id: string
@@ -184,6 +227,7 @@ export type Database = {
           id?: string
           short_code?: string
           status?: Database["public"]["Enums"]["link_status"]
+          targeting?: Json
           title?: string | null
           updated_at?: string
           user_id?: string

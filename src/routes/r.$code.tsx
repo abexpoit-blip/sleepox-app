@@ -188,6 +188,76 @@ async function ipExceedsRate(ip: string, cfg: ProtectionConfig): Promise<number>
   return perMinEquivalent > cfg.ip_rate_limit_per_min ? count ?? 0 : 0;
 }
 
+// ---------- Targeting (geo / device / language / time) ----------
+
+type Targeting = {
+  allowed_countries?: string[];
+  blocked_countries?: string[];
+  allowed_devices?: string[];   // "desktop" | "mobile" | "tablet"
+  blocked_devices?: string[];
+  allowed_languages?: string[]; // e.g. ["en","bn"]
+  blocked_languages?: string[];
+  allowed_hours?: { start: number; end: number } | null; // 0-23 UTC
+};
+
+function primaryLang(acceptLang: string | undefined | null): string | null {
+  if (!acceptLang) return null;
+  const first = acceptLang.split(",")[0]?.trim().toLowerCase();
+  if (!first) return null;
+  return first.split("-")[0].slice(0, 5);
+}
+
+function checkTargeting(
+  t: Targeting | null | undefined,
+  ctx: { country: string | null; device: string | null; lang: string | null },
+): { blocked: boolean; reason: string } {
+  if (!t || typeof t !== "object") return { blocked: false, reason: "" };
+  const country = (ctx.country || "").toUpperCase();
+  const device = (ctx.device || "").toLowerCase();
+  const lang = (ctx.lang || "").toLowerCase();
+
+  if (t.allowed_countries?.length && country && !t.allowed_countries.map(c => c.toUpperCase()).includes(country)) {
+    return { blocked: true, reason: `geo-not-allowed:${country}` };
+  }
+  if (t.blocked_countries?.length && country && t.blocked_countries.map(c => c.toUpperCase()).includes(country)) {
+    return { blocked: true, reason: `geo-blocked:${country}` };
+  }
+  if (t.allowed_devices?.length && device && !t.allowed_devices.map(d => d.toLowerCase()).includes(device)) {
+    return { blocked: true, reason: `device-not-allowed:${device}` };
+  }
+  if (t.blocked_devices?.length && device && t.blocked_devices.map(d => d.toLowerCase()).includes(device)) {
+    return { blocked: true, reason: `device-blocked:${device}` };
+  }
+  if (t.allowed_languages?.length && lang && !t.allowed_languages.map(l => l.toLowerCase()).includes(lang)) {
+    return { blocked: true, reason: `lang-not-allowed:${lang}` };
+  }
+  if (t.blocked_languages?.length && lang && t.blocked_languages.map(l => l.toLowerCase()).includes(lang)) {
+    return { blocked: true, reason: `lang-blocked:${lang}` };
+  }
+  if (t.allowed_hours && typeof t.allowed_hours.start === "number" && typeof t.allowed_hours.end === "number") {
+    const h = new Date().getUTCHours();
+    const { start, end } = t.allowed_hours;
+    const inWindow = start <= end ? (h >= start && h <= end) : (h >= start || h <= end);
+    if (!inWindow) return { blocked: true, reason: `hour-blocked:${h}UTC` };
+  }
+  return { blocked: false, reason: "" };
+}
+
+function pickWeightedDestination(
+  rows: { url: string; weight: number; is_active: boolean }[],
+  fallback: string,
+): string {
+  const active = rows.filter(r => r.is_active && r.weight > 0 && r.url);
+  if (active.length === 0) return fallback;
+  const total = active.reduce((s, r) => s + r.weight, 0);
+  let pick = Math.random() * total;
+  for (const r of active) {
+    pick -= r.weight;
+    if (pick <= 0) return r.url;
+  }
+  return active[active.length - 1].url;
+}
+
 // ---------- Server functions ----------
 
 const resolveLink = createServerFn({ method: "POST" })
@@ -207,27 +277,39 @@ const resolveLink = createServerFn({ method: "POST" })
 
     const { data: link } = await supabaseAdmin
       .from("links")
-      .select("id, status")
+      .select("id, status, targeting")
       .eq("short_code", data.code)
       .maybeSingle();
 
     if (!link || link.status !== "active") return { found: false as const };
 
+    // Targeting check (geo/device/lang/time)
+    const uaInfoT = parseUA(a.ua);
+    const targetingCheck = checkTargeting(link.targeting as Targeting | null, {
+      country,
+      device: uaInfoT.device,
+      lang: primaryLang(a.acceptLang),
+    });
+
     // IP velocity check
     const rateHits = await ipExceedsRate(ip, cfg);
     const rateLimited = rateHits > 0;
 
-    // Aggregate suspicion: pre-flag bot OR rate-limited OR over hard threshold
+    // Aggregate suspicion: pre-flag bot OR rate-limited OR over hard threshold OR targeting block
     const suspicious =
-      a.isBot || rateLimited || a.score >= cfg.block_threshold_score;
+      a.isBot || rateLimited || a.score >= cfg.block_threshold_score || targetingCheck.blocked;
 
     const suspicionReasons = [
       a.reasons,
       rateLimited ? `rate:${rateHits}/${cfg.ip_rate_limit_window_sec}s` : "",
+      targetingCheck.blocked ? `target:${targetingCheck.reason}` : "",
     ].filter(Boolean).join(",");
 
+    // Targeting block always shows safe page (never reveals destination)
+    const effectiveAction = targetingCheck.blocked ? "safe_page" : cfg.suspicious_action;
+
     // Hard block path
-    if (suspicious && cfg.suspicious_action === "block") {
+    if (suspicious && effectiveAction === "block") {
       const uaInfoB = parseUA(a.ua);
       const attrB = attributionFromRequestUrl();
       await supabaseAdmin.from("clicks").insert({
@@ -253,7 +335,7 @@ const resolveLink = createServerFn({ method: "POST" })
     }
 
     // Safe page path — show innocuous content, never reveal destination
-    if (suspicious && cfg.suspicious_action === "safe_page") {
+    if (suspicious && effectiveAction === "safe_page") {
       const uaInfoS = parseUA(a.ua);
       const attrS = attributionFromRequestUrl();
       await supabaseAdmin.from("clicks").insert({
@@ -401,7 +483,7 @@ const verifyHuman = createServerFn({ method: "POST" })
 
     const { data: link } = await supabaseAdmin
       .from("links")
-      .select("id, destination_url, status")
+      .select("id, destination_url, status, targeting")
       .eq("short_code", data.code)
       .maybeSingle();
 
@@ -409,15 +491,26 @@ const verifyHuman = createServerFn({ method: "POST" })
       return { ok: false as const, reason: "not-found" };
     }
 
-    // Re-check protection at verification time (fresh IP velocity)
+    // Re-check protection + targeting at verification time
     const cfg = await loadProtection();
     const rateHits = await ipExceedsRate(ip, cfg);
+
+    const uaInfo2 = parseUA(a.ua);
+    const targetingCheck2 = checkTargeting(link.targeting as Targeting | null, {
+      country: getRequestHeader("cf-ipcountry") || null,
+      device: uaInfo2.device,
+      lang: primaryLang(a.acceptLang),
+    });
 
     let score = a.score;
     const reasons: string[] = a.reasons ? [a.reasons] : [];
     if (rateHits > 0) {
       score += 60;
       reasons.push(`rate:${rateHits}/${cfg.ip_rate_limit_window_sec}s`);
+    }
+    if (targetingCheck2.blocked) {
+      score += 100;
+      reasons.push(`target:${targetingCheck2.reason}`);
     }
     const fp = data.fp;
 
@@ -448,7 +541,6 @@ const verifyHuman = createServerFn({ method: "POST" })
 
     const isBot = score >= cfg.block_threshold_score;
 
-    const uaInfo2 = parseUA(a.ua);
     const attr2 = attributionFromReferer();
     await supabaseAdmin.from("clicks").insert({
       link_id: link.id,
@@ -484,7 +576,14 @@ const verifyHuman = createServerFn({ method: "POST" })
         .eq("id", link.id);
     }
 
-    return { ok: true as const, destination: link.destination_url };
+    // Smart rotator: pick weighted destination if any active rows exist
+    const { data: destRows } = await supabaseAdmin
+      .from("link_destinations")
+      .select("url,weight,is_active")
+      .eq("link_id", link.id);
+    const destination = pickWeightedDestination(destRows ?? [], link.destination_url);
+
+    return { ok: true as const, destination };
   });
 
 // ---------- Route ----------
