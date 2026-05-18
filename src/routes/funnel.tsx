@@ -36,20 +36,35 @@ function FunnelPage() {
   const fetchFunnel = useServerFn(getCrossLinkFunnel);
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState(7);
+  const [from, setFrom] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [to, setTo] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);
+    return d;
+  });
   const [sortBy, setSortBy] = useState<"impressions" | "realClicks" | "conversions" | "conversionRate">("impressions");
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await fetchFunnel({ data: { days } });
+      const res = await fetchFunnel({
+        data: {
+          from: from.toISOString(),
+          to: to.toISOString(),
+        },
+      });
       setData(res);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { void load(); /* eslint-disable-next-line */ }, [days]);
+  useEffect(() => { void load(); /* eslint-disable-next-line */ }, [from, to]);
 
   const rows = useMemo(() => {
     if (!data) return [];
