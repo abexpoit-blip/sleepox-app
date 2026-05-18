@@ -1,15 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { auditAdminGate } from "./admin-audit.server";
 import { z } from "zod";
 
-async function assertAdmin(userId: string) {
-  const { data, error } = await supabaseAdmin.rpc("has_role", {
-    _user_id: userId,
-    _role: "admin",
-  });
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Forbidden: admin role required");
+async function assertAdmin(userId: string, action: string, metadata?: Record<string, unknown>) {
+  await auditAdminGate({ userId, action, metadata });
 }
 
 const WindowSchema = z.object({
@@ -38,7 +34,7 @@ export const getVariantLeaderboard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => WindowSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.userId, "rotation.leaderboard.view", { window: data.window });
 
     const since =
       data.window === "all"
@@ -143,7 +139,7 @@ export const promoteVariant = createServerFn({ method: "POST" })
     z.object({ slug: z.string().min(1).max(64) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.userId, "rotation.promote", { slug: data.slug });
 
     const { error: e1 } = await supabaseAdmin
       .from("prelander_variants")
@@ -164,7 +160,7 @@ export const promoteVariant = createServerFn({ method: "POST" })
 export const resetRotation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.userId, "rotation.reset");
     const { error } = await supabaseAdmin
       .from("prelander_variants")
       .update({ is_active: true })
