@@ -80,6 +80,16 @@ function AdminVariantsPage() {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<(Omit<VariantRow, "stats"> & { stats?: VariantRow["stats"] }) | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const reorderSections = (from: number, to: number) => {
+    if (!editing || from === to || to < 0 || to >= editing.sections.length) return;
+    const next = [...editing.sections];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setEditing({ ...editing, sections: next });
+  };
 
   const refresh = async () => {
     const [v, l] = await Promise.all([listVariants(), listLinks({ data: { search } })]);
