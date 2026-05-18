@@ -66,7 +66,6 @@ export const VARIANTS: Record<VariantId, Variant> = {
 
 export const VARIANT_IDS = Object.keys(VARIANTS) as VariantId[];
 
-export type VariantStat = { id: VariantId; total: number; humans: number };
 
 /**
  * Stats per variant.
