@@ -338,7 +338,7 @@ function Dashboard() {
                   </div>
                   <div className="flex gap-2">
                     <Button asChild variant="outline" size="sm" className="gap-1.5">
-                      <Link to="/analytics">
+                      <Link to="/analytics" search={{ days: rangeDays, linkId: "all" }}>
                         <Activity className="h-3.5 w-3.5" /> View analytics
                       </Link>
                     </Button>
@@ -794,7 +794,7 @@ function Dashboard() {
                               className="h-8 w-8"
                               title="Analytics"
                             >
-                              <Link to="/analytics/$linkId" params={{ linkId: l.id }}>
+                              <Link to="/analytics/$linkId" params={{ linkId: l.id }} search={{ days: rangeDays }}>
                                 <Activity className="h-3.5 w-3.5" />
                               </Link>
                             </Button>
