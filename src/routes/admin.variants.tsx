@@ -389,8 +389,43 @@ function AdminVariantsPage() {
                 </div>
                 <div className="space-y-2">
                   {editing.sections.map((s, i) => (
-                    <div key={i} className="border rounded p-3 bg-background space-y-2">
-                      <div className="flex gap-2">
+                    <div
+                      key={i}
+                      draggable
+                      onDragStart={(e) => {
+                        setDragIndex(i);
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        if (dragOverIndex !== i) setDragOverIndex(i);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverIndex === i) setDragOverIndex(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragIndex !== null) reorderSections(dragIndex, i);
+                        setDragIndex(null);
+                        setDragOverIndex(null);
+                      }}
+                      onDragEnd={() => {
+                        setDragIndex(null);
+                        setDragOverIndex(null);
+                      }}
+                      className={`border rounded p-3 bg-background space-y-2 transition-all ${
+                        dragIndex === i ? "opacity-50" : ""
+                      } ${dragOverIndex === i && dragIndex !== i ? "border-primary border-2" : ""}`}
+                    >
+                      <div className="flex gap-2 items-center">
+                        <div
+                          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+                          title="Drag to reorder"
+                        >
+                          <GripVertical className="h-4 w-4" />
+                        </div>
+                        <span className="text-xs text-muted-foreground font-mono w-6">#{i + 1}</span>
                         <Input
                           placeholder="Heading"
                           value={s.heading}
@@ -400,6 +435,24 @@ function AdminVariantsPage() {
                             setEditing({ ...editing, sections: next });
                           }}
                         />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={i === 0}
+                          onClick={() => reorderSections(i, i - 1)}
+                          title="Move up"
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={i === editing.sections.length - 1}
+                          onClick={() => reorderSections(i, i + 1)}
+                          title="Move down"
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
