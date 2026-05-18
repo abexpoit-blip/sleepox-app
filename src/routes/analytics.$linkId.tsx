@@ -1,9 +1,10 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Shield, ArrowLeft, Eye, Users, Bot, Target, AlertTriangle, TrendingUp,
   Globe, Smartphone, Monitor, RefreshCw, Copy, ExternalLink, Fingerprint,
+  Megaphone, Radio,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -35,19 +36,45 @@ function LinkMonitorPage() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(7);
+  const [live, setLive] = useState(false);
+  const [pulse, setPulse] = useState(0);
+  const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetchMonitor({ data: { linkId, days } });
       setData(res);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to load");
+      if (!silent) toast.error(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
   useEffect(() => { void load(); /* eslint-disable-next-line */ }, [days, linkId]);
+
+  // Realtime: subscribe to new clicks for this link and debounce-refetch.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`clicks-live-${linkId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "clicks", filter: `link_id=eq.${linkId}` },
+        () => {
+          setPulse((p) => p + 1);
+          if (reloadTimer.current) clearTimeout(reloadTimer.current);
+          reloadTimer.current = setTimeout(() => void load(true), 800);
+        },
+      )
+      .subscribe((status) => {
+        setLive(status === "SUBSCRIBED");
+      });
+    return () => {
+      if (reloadTimer.current) clearTimeout(reloadTimer.current);
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line
+  }, [linkId, days]);
 
   const t = data?.totals;
   const shortUrl = data ? `${typeof window !== "undefined" ? window.location.origin : ""}/r/${data.link.short_code}` : "";
@@ -74,7 +101,12 @@ function LinkMonitorPage() {
                 <SelectItem value="90">Last 90 days</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon" onClick={load} disabled={loading}>
+            <div className="hidden sm:flex items-center gap-1.5 text-xs px-2 py-1 rounded-md border border-border">
+              <span className={`h-2 w-2 rounded-full ${live ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/40"}`} />
+              {live ? "Live" : "Offline"}
+              {pulse > 0 && <span className="text-muted-foreground tabular-nums">· {pulse}</span>}
+            </div>
+            <Button variant="outline" size="icon" onClick={() => void load()} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/analytics" })}>
@@ -218,11 +250,52 @@ function LinkMonitorPage() {
           </Card>
         </div>
 
+        {/* Source attribution */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Megaphone className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold">Top ad sources (utm_source)</h2>
+            </div>
+            <BreakdownTable rows={data?.bySource ?? []} showConversion emptyMsg="No tagged sources yet. Add ?utm_source=facebook to your links." />
+          </Card>
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold">Top campaigns (utm_campaign)</h2>
+            </div>
+            <BreakdownTable rows={data?.byCampaign ?? []} showConversion emptyMsg="No campaign tags detected." />
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Radio className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold">Mediums (utm_medium)</h2>
+            </div>
+            <BreakdownTable rows={data?.byMedium ?? []} showConversion emptyMsg="No medium tags." />
+          </Card>
+          <Card className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Globe className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold">Referrer hosts</h2>
+            </div>
+            <BreakdownTable rows={data?.byReferer ?? []} showConversion emptyMsg="Direct traffic only." />
+          </Card>
+        </div>
+
         {/* Recent events */}
         <Card className="p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold">Latest visitors</h2>
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold">Latest visitors</h2>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className={`h-2 w-2 rounded-full ${live ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/40"}`} />
+              {live ? "Live updates on" : "Connecting…"}
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -230,7 +303,9 @@ function LinkMonitorPage() {
                 <tr>
                   <th className="text-left py-2 px-2">When</th>
                   <th className="text-left py-2 px-2">Status</th>
-                  <th className="text-left py-2 px-2">Reason</th>
+                  <th className="text-left py-2 px-2">Source</th>
+                  <th className="text-left py-2 px-2">Campaign</th>
+                  <th className="text-left py-2 px-2">Referrer</th>
                   <th className="text-left py-2 px-2">Country</th>
                   <th className="text-left py-2 px-2">Device</th>
                   <th className="text-left py-2 px-2">Variant</th>
@@ -239,7 +314,7 @@ function LinkMonitorPage() {
               </thead>
               <tbody>
                 {(data?.recent ?? []).map((r, i) => (
-                  <tr key={i} className="border-b border-border/50">
+                  <tr key={i} className="border-b border-border/50 animate-in fade-in">
                     <td className="py-2 px-2 text-muted-foreground whitespace-nowrap">
                       {new Date(r.created_at).toLocaleString()}
                     </td>
@@ -248,8 +323,10 @@ function LinkMonitorPage() {
                         ? <span className="px-2 py-0.5 rounded bg-rose-500/15 text-rose-500 text-xs">BOT</span>
                         : <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 text-xs">HUMAN</span>}
                     </td>
-                    <td className="py-2 px-2 text-xs text-muted-foreground max-w-xs truncate" title={r.reason ?? ""}>
-                      {r.reason ?? "—"}
+                    <td className="py-2 px-2 text-xs">{r.utm_source ?? "—"}</td>
+                    <td className="py-2 px-2 text-xs">{r.utm_campaign ?? "—"}</td>
+                    <td className="py-2 px-2 text-xs text-muted-foreground max-w-[12rem] truncate" title={r.referer_host ?? ""}>
+                      {r.referer_host ?? "—"}
                     </td>
                     <td className="py-2 px-2">{r.country ?? "—"}</td>
                     <td className="py-2 px-2">{r.device ?? "—"}</td>
@@ -258,7 +335,7 @@ function LinkMonitorPage() {
                   </tr>
                 ))}
                 {!data?.recent.length && (
-                  <tr><td colSpan={7} className="py-6 text-center text-muted-foreground">No clicks in this period</td></tr>
+                  <tr><td colSpan={9} className="py-6 text-center text-muted-foreground">No clicks in this period</td></tr>
                 )}
               </tbody>
             </table>
@@ -295,11 +372,12 @@ function Empty({ msg }: { msg?: string }) {
   );
 }
 
-function BreakdownTable({ rows, showConversion }: {
+function BreakdownTable({ rows, showConversion, emptyMsg }: {
   rows: { key: string; total: number; humans: number; bots: number }[];
   showConversion?: boolean;
+  emptyMsg?: string;
 }) {
-  if (!rows.length) return <Empty />;
+  if (!rows.length) return <Empty msg={emptyMsg} />;
   const max = Math.max(...rows.map((r) => r.total), 1);
   return (
     <div className="space-y-2 max-h-72 overflow-y-auto pr-2">

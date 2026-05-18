@@ -19,6 +19,12 @@ type Click = {
   ip_address: string | null;
   user_agent: string | null;
   created_at: string;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_term: string | null;
+  utm_content: string | null;
+  referer_host: string | null;
 };
 
 export const getLinkMonitor = createServerFn({ method: "POST" })
@@ -38,7 +44,7 @@ export const getLinkMonitor = createServerFn({ method: "POST" })
 
     const { data: clicksRaw } = await supabase
       .from("clicks")
-      .select("is_bot,bot_reason,variant,country,device,browser,os,referer,ip_address,user_agent,created_at")
+      .select("is_bot,bot_reason,variant,country,device,browser,os,referer,ip_address,user_agent,created_at,utm_source,utm_medium,utm_campaign,utm_term,utm_content,referer_host")
       .eq("link_id", data.linkId)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
@@ -106,6 +112,9 @@ export const getLinkMonitor = createServerFn({ method: "POST" })
       variant: c.variant,
       ip: c.ip_address ? c.ip_address.replace(/\.\d+$/, ".•") : null,
       ua: c.user_agent?.slice(0, 80) ?? null,
+      utm_source: c.utm_source,
+      utm_campaign: c.utm_campaign,
+      referer_host: c.referer_host,
     }));
 
     return {
@@ -125,6 +134,10 @@ export const getLinkMonitor = createServerFn({ method: "POST" })
       byDevice: bucket((c) => c.device),
       byBrowser: bucket((c) => c.browser).slice(0, 10),
       byOS: bucket((c) => c.os).slice(0, 10),
+      bySource: bucket((c) => c.utm_source).slice(0, 15),
+      byMedium: bucket((c) => c.utm_medium).slice(0, 10),
+      byCampaign: bucket((c) => c.utm_campaign).slice(0, 15),
+      byReferer: bucket((c) => c.referer_host).slice(0, 15),
       recent,
     };
   });
