@@ -471,7 +471,12 @@ function Dashboard() {
 
               {/* Secondary row: Bots blocked + Links + Top */}
               <div className="grid gap-4 lg:grid-cols-3">
-                <div className="relative overflow-hidden rounded-2xl border border-border bg-card-gradient p-5 shadow-card">
+                <div
+                  className="relative overflow-hidden rounded-2xl border border-border bg-card-gradient p-5 shadow-card cursor-pointer transition-all hover:border-destructive/40"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate({ to: "/analytics" })}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
