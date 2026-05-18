@@ -325,6 +325,7 @@ const resolveLink = createServerFn({ method: "POST" })
     const chosenVariant = variants.find((v) => v.slug === chosenSlug) ?? variants[0];
 
     const uaInfo = parseUA(a.ua);
+    const attr = attributionFromRequestUrl();
     await supabaseAdmin.from("clicks").insert({
       link_id: link.id,
       ip_address: ip || null,
@@ -337,6 +338,7 @@ const resolveLink = createServerFn({ method: "POST" })
       os: uaInfo.os,
       browser: uaInfo.browser,
       variant: chosenVariant.slug,
+      ...attr,
     });
 
     if (a.isBot) {
