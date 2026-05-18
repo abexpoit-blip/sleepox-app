@@ -90,7 +90,6 @@ function LinkMonitorPage() {
       search: (prev: LinkSearch) => ({ ...prev, days: n }),
       replace: true,
     });
-  const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
