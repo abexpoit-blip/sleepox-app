@@ -502,22 +502,36 @@ function Dashboard() {
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10 text-success">
                       <Activity className="h-4 w-4" />
                     </div>
-                    <span className="font-mono text-[10px] font-semibold text-success">
-                      {rangeTotals.total > 0 ? ((rangeTotals.humans / rangeTotals.total) * 100).toFixed(0) : 0}%
-                    </span>
+                    {analyticsLoading ? (
+                      <div className="h-4 w-10 animate-pulse rounded bg-muted" />
+                    ) : (
+                      <span className="font-mono text-[10px] font-semibold text-success">
+                        {rangeTotals.total > 0 ? ((rangeTotals.humans / rangeTotals.total) * 100).toFixed(0) : 0}%
+                      </span>
+                    )}
                   </div>
-                  <div className="mt-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Real Humans
-                  </div>
-                  <div className="mt-1 font-display text-3xl font-bold tracking-tight">
-                    {rangeTotals.humans.toLocaleString()}
-                  </div>
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="h-full rounded-full bg-success transition-all"
-                      style={{ width: `${rangeTotals.total ? (rangeTotals.humans / rangeTotals.total) * 100 : 0}%` }}
-                    />
-                  </div>
+                  {analyticsLoading ? (
+                    <div className="mt-4 space-y-3">
+                      <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+                      <div className="h-8 w-28 animate-pulse rounded-lg bg-muted" />
+                      <div className="h-1.5 w-full animate-pulse rounded-full bg-muted" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mt-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        Real Humans
+                      </div>
+                      <div className="mt-1 font-display text-3xl font-bold tracking-tight">
+                        {rangeTotals.humans.toLocaleString()}
+                      </div>
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary">
+                        <div
+                          className="h-full rounded-full bg-success transition-all"
+                          style={{ width: `${rangeTotals.total ? (rangeTotals.humans / rangeTotals.total) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
