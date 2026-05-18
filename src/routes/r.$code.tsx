@@ -309,7 +309,7 @@ const resolveLink = createServerFn({ method: "POST" })
     const effectiveAction = targetingCheck.blocked ? "safe_page" : cfg.suspicious_action;
 
     // Hard block path
-    if (suspicious && cfg.suspicious_action === "block") {
+    if (suspicious && effectiveAction === "block") {
       const uaInfoB = parseUA(a.ua);
       const attrB = attributionFromRequestUrl();
       await supabaseAdmin.from("clicks").insert({
@@ -335,7 +335,7 @@ const resolveLink = createServerFn({ method: "POST" })
     }
 
     // Safe page path — show innocuous content, never reveal destination
-    if (suspicious && cfg.suspicious_action === "safe_page") {
+    if (suspicious && effectiveAction === "safe_page") {
       const uaInfoS = parseUA(a.ua);
       const attrS = attributionFromRequestUrl();
       await supabaseAdmin.from("clicks").insert({
