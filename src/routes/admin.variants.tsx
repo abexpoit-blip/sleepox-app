@@ -2,7 +2,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Shield, ArrowLeft, Plus, Trash2, Save, X, Lock, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
+import { Shield, ArrowLeft, Plus, Trash2, Save, X, Lock, GripVertical, ArrowUp, ArrowDown, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -318,204 +318,246 @@ function AdminVariantsPage() {
       {editing && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 overflow-y-auto">
           <div className="min-h-screen flex items-start justify-center p-4">
-            <div className="bg-card border rounded-lg w-full max-w-3xl my-8 p-6 shadow-lg">
+            <div className="bg-card border rounded-lg w-full max-w-6xl my-4 p-6 shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">
                   {editing.id ? "Edit variant" : "New variant"}
                 </h3>
-                <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <Label>Slug (unique id)</Label>
-                  <Input
-                    value={editing.slug}
-                    onChange={(e) => setEditing({ ...editing, slug: e.target.value })}
-                    placeholder="wellness"
-                  />
-                </div>
-                <div>
-                  <Label>Category</Label>
-                  <Input
-                    value={editing.category}
-                    onChange={(e) => setEditing({ ...editing, category: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <Label>Title</Label>
-                <Input
-                  value={editing.title}
-                  onChange={(e) => setEditing({ ...editing, title: e.target.value })}
-                />
-              </div>
-
-              <div className="mb-3">
-                <Label>Subtitle</Label>
-                <Input
-                  value={editing.subtitle}
-                  onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })}
-                />
-              </div>
-
-              <div className="mb-3">
-                <Label>Intro paragraph</Label>
-                <Textarea
-                  rows={3}
-                  value={editing.intro}
-                  onChange={(e) => setEditing({ ...editing, intro: e.target.value })}
-                />
-              </div>
-
-              <div className="mb-3">
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Sections</Label>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      setEditing({
-                        ...editing,
-                        sections: [...editing.sections, { heading: "", body: "" }],
-                      })
-                    }
-                  >
-                    <Plus className="h-3 w-3 mr-1" /> Add
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>
+                    <X className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="space-y-2">
-                  {editing.sections.map((s, i) => (
-                    <div
-                      key={i}
-                      draggable
-                      onDragStart={(e) => {
-                        setDragIndex(i);
-                        e.dataTransfer.effectAllowed = "move";
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = "move";
-                        if (dragOverIndex !== i) setDragOverIndex(i);
-                      }}
-                      onDragLeave={() => {
-                        if (dragOverIndex === i) setDragOverIndex(null);
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (dragIndex !== null) reorderSections(dragIndex, i);
-                        setDragIndex(null);
-                        setDragOverIndex(null);
-                      }}
-                      onDragEnd={() => {
-                        setDragIndex(null);
-                        setDragOverIndex(null);
-                      }}
-                      className={`border rounded p-3 bg-background space-y-2 transition-all ${
-                        dragIndex === i ? "opacity-50" : ""
-                      } ${dragOverIndex === i && dragIndex !== i ? "border-primary border-2" : ""}`}
-                    >
-                      <div className="flex gap-2 items-center">
-                        <div
-                          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
-                          title="Drag to reorder"
-                        >
-                          <GripVertical className="h-4 w-4" />
-                        </div>
-                        <span className="text-xs text-muted-foreground font-mono w-6">#{i + 1}</span>
-                        <Input
-                          placeholder="Heading"
-                          value={s.heading}
-                          onChange={(e) => {
-                            const next = [...editing.sections];
-                            next[i] = { ...next[i], heading: e.target.value };
-                            setEditing({ ...editing, sections: next });
-                          }}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={i === 0}
-                          onClick={() => reorderSections(i, i - 1)}
-                          title="Move up"
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={i === editing.sections.length - 1}
-                          onClick={() => reorderSections(i, i + 1)}
-                          title="Move down"
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setEditing({
-                              ...editing,
-                              sections: editing.sections.filter((_, j) => j !== i),
-                            })
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Textarea
-                        placeholder="Body"
-                        rows={3}
-                        value={s.body}
-                        onChange={(e) => {
-                          const next = [...editing.sections];
-                          next[i] = { ...next[i], body: e.target.value };
-                          setEditing({ ...editing, sections: next });
-                        }}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* LEFT — Editor */}
+                <div className="space-y-3 max-h-[80vh] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Slug (unique id)</Label>
+                      <Input
+                        value={editing.slug}
+                        onChange={(e) => setEditing({ ...editing, slug: e.target.value })}
+                        placeholder="wellness"
                       />
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div>
+                      <Label>Category</Label>
+                      <Input
+                        value={editing.category}
+                        onChange={(e) => setEditing({ ...editing, category: e.target.value })}
+                      />
+                    </div>
+                  </div>
 
-              <div className="mb-3">
-                <Label>Outro paragraph</Label>
-                <Textarea
-                  rows={2}
-                  value={editing.outro}
-                  onChange={(e) => setEditing({ ...editing, outro: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div>
-                  <Label>Sort order</Label>
-                  <Input
-                    type="number"
-                    value={editing.sort_order}
-                    onChange={(e) =>
-                      setEditing({ ...editing, sort_order: Number(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div className="flex items-end">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={editing.is_active}
-                      onChange={(e) =>
-                        setEditing({ ...editing, is_active: e.target.checked })
-                      }
+                  <div>
+                    <Label>Title</Label>
+                    <Input
+                      value={editing.title}
+                      onChange={(e) => setEditing({ ...editing, title: e.target.value })}
                     />
-                    Active (served to traffic)
-                  </label>
+                  </div>
+
+                  <div>
+                    <Label>Subtitle</Label>
+                    <Input
+                      value={editing.subtitle}
+                      onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Intro paragraph</Label>
+                    <Textarea
+                      rows={3}
+                      value={editing.intro}
+                      onChange={(e) => setEditing({ ...editing, intro: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label>Sections</Label>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setEditing({
+                            ...editing,
+                            sections: [...editing.sections, { heading: "", body: "" }],
+                          })
+                        }
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Add
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {editing.sections.map((s, i) => (
+                        <div
+                          key={i}
+                          draggable
+                          onDragStart={(e) => {
+                            setDragIndex(i);
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = "move";
+                            if (dragOverIndex !== i) setDragOverIndex(i);
+                          }}
+                          onDragLeave={() => {
+                            if (dragOverIndex === i) setDragOverIndex(null);
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (dragIndex !== null) reorderSections(dragIndex, i);
+                            setDragIndex(null);
+                            setDragOverIndex(null);
+                          }}
+                          onDragEnd={() => {
+                            setDragIndex(null);
+                            setDragOverIndex(null);
+                          }}
+                          className={`border rounded p-3 bg-background space-y-2 transition-all ${
+                            dragIndex === i ? "opacity-50" : ""
+                          } ${dragOverIndex === i && dragIndex !== i ? "border-primary border-2" : ""}`}
+                        >
+                          <div className="flex gap-2 items-center">
+                            <div
+                              className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+                              title="Drag to reorder"
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </div>
+                            <span className="text-xs text-muted-foreground font-mono w-6">#{i + 1}</span>
+                            <Input
+                              placeholder="Heading"
+                              value={s.heading}
+                              onChange={(e) => {
+                                const next = [...editing.sections];
+                                next[i] = { ...next[i], heading: e.target.value };
+                                setEditing({ ...editing, sections: next });
+                              }}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={i === 0}
+                              onClick={() => reorderSections(i, i - 1)}
+                              title="Move up"
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={i === editing.sections.length - 1}
+                              onClick={() => reorderSections(i, i + 1)}
+                              title="Move down"
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setEditing({
+                                  ...editing,
+                                  sections: editing.sections.filter((_, j) => j !== i),
+                                })
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <Textarea
+                            placeholder="Body"
+                            rows={3}
+                            value={s.body}
+                            onChange={(e) => {
+                              const next = [...editing.sections];
+                              next[i] = { ...next[i], body: e.target.value };
+                              setEditing({ ...editing, sections: next });
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Outro paragraph</Label>
+                    <Textarea
+                      rows={2}
+                      value={editing.outro}
+                      onChange={(e) => setEditing({ ...editing, outro: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Sort order</Label>
+                      <Input
+                        type="number"
+                        value={editing.sort_order}
+                        onChange={(e) =>
+                          setEditing({ ...editing, sort_order: Number(e.target.value) || 0 })
+                        }
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={editing.is_active}
+                          onChange={(e) =>
+                            setEditing({ ...editing, is_active: e.target.checked })
+                          }
+                        />
+                        Active (served to traffic)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT — Live Preview */}
+                <div className="border rounded-lg overflow-hidden bg-background flex flex-col h-[80vh]">
+                  <div className="bg-muted/60 px-4 py-2 flex items-center gap-2 border-b">
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Live Preview</span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-6">
+                    <div className="mx-auto max-w-2xl">
+                      <p className="text-sm uppercase tracking-wider text-primary mb-2">{editing.category || "Category"}</p>
+                      <h1 className="text-2xl sm:text-3xl font-bold leading-tight mb-2">
+                        {editing.title || "Article Title"}
+                      </h1>
+                      <p className="text-muted-foreground mb-6">{editing.subtitle || "Subtitle goes here..."}</p>
+                      <p className="mb-4 leading-relaxed text-sm">{editing.intro || "Intro paragraph..."}</p>
+                      {editing.sections.map((s, i) => (
+                        <div key={`${s.heading}-${i}`}>
+                          <h2 className="text-lg font-semibold mt-6 mb-2">{s.heading || `Section ${i + 1}`}</h2>
+                          <p className="mb-4 leading-relaxed text-sm">{s.body || "Body text..."}</p>
+                        </div>
+                      ))}
+                      <p className="leading-relaxed text-sm">{editing.outro || "Outro paragraph..."}</p>
+
+                      <div className="mt-8 rounded-lg border border-border bg-card p-5 text-center">
+                        <h3 className="text-base font-semibold mb-1">Continue reading</h3>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Scroll or interact with the page to load the next article.
+                        </p>
+                        <span className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground opacity-80">
+                          Continue
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
                 <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
                 <Button onClick={save} className="gap-2">
                   <Save className="h-4 w-4" /> Save
