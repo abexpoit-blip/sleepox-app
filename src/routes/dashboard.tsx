@@ -107,6 +107,9 @@ function Dashboard() {
               <Link to="/analytics"><BarChart3 className="h-4 w-4" /> Analytics</Link>
             </Button>
             <Button asChild variant="outline" size="sm" className="gap-2">
+              <Link to="/admin/rotation"><Trophy className="h-4 w-4" /> Rotation</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-2">
               <Link to="/admin/protection"><Shield className="h-4 w-4" /> Protection</Link>
             </Button>
             <Button asChild variant="outline" size="sm" className="gap-2">
