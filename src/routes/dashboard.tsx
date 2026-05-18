@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Shield, Plus, Copy, ExternalLink, Settings, TrendingUp, TrendingDown,
+  Plus, Copy, ExternalLink, Settings, TrendingUp, TrendingDown,
   Activity, Bot, MousePointerClick, Link2, ArrowUpRight, Search, Bell,
   Sparkles, Trash2, CheckCircle2,
 } from "lucide-react";
