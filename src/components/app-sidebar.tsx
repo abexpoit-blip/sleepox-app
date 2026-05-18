@@ -10,6 +10,7 @@ import {
   Sparkles,
   LogOut,
   Globe2,
+  ScrollText,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +39,7 @@ const adminNav = [
   { title: "Rotation", url: "/admin/rotation", icon: Trophy },
   { title: "Protection", url: "/admin/protection", icon: ShieldCheck },
   { title: "Variants", url: "/admin/variants", icon: Settings },
+  { title: "Audit Logs", url: "/admin/audit", icon: ScrollText },
 ];
 
 export function AppSidebar({ email }: { email?: string }) {
