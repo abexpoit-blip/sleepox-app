@@ -240,8 +240,9 @@ function AnalyticsPage() {
               </thead>
               <tbody>
                 {(data?.byLink ?? []).map((l) => (
-                  <tr key={l.id} className="border-b border-border/50">
-                    <td className="py-2 px-2 font-mono text-primary">/r/{l.short_code}</td>
+                  <tr key={l.id} className="border-b border-border/50 hover:bg-muted/40 cursor-pointer"
+                      onClick={() => navigate({ to: "/analytics/$linkId", params: { linkId: l.id } })}>
+                    <td className="py-2 px-2 font-mono text-primary underline-offset-2 hover:underline">/r/{l.short_code}</td>
                     <td className="py-2 px-2 max-w-xs truncate text-muted-foreground" title={l.destination_url}>
                       {l.destination_url}
                     </td>
