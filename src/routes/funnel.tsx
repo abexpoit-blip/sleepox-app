@@ -1,8 +1,10 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { format } from "date-fns";
 import {
   Shield, ArrowLeft, RefreshCw, GitCompare, TrendingDown, Target, BarChart3,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -11,6 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { getCrossLinkFunnel } from "@/lib/cross-funnel.functions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -30,20 +36,35 @@ function FunnelPage() {
   const fetchFunnel = useServerFn(getCrossLinkFunnel);
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState(7);
+  const [from, setFrom] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [to, setTo] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);
+    return d;
+  });
   const [sortBy, setSortBy] = useState<"impressions" | "realClicks" | "conversions" | "conversionRate">("impressions");
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await fetchFunnel({ data: { days } });
+      const res = await fetchFunnel({
+        data: {
+          from: from.toISOString(),
+          to: to.toISOString(),
+        },
+      });
       setData(res);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { void load(); /* eslint-disable-next-line */ }, [days]);
+  useEffect(() => { void load(); /* eslint-disable-next-line */ }, [from, to]);
 
   const rows = useMemo(() => {
     if (!data) return [];
@@ -71,8 +92,23 @@ function FunnelPage() {
             <span className="font-bold tracking-tight text-lg">Cross-Link Funnel</span>
           </div>
           <div className="flex items-center gap-2">
-            <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
-              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <Select
+              value="custom"
+              onValueChange={(v) => {
+                const now = new Date();
+                now.setHours(23, 59, 59, 999);
+                let start = new Date();
+                start.setHours(0, 0, 0, 0);
+                if (v === "1") start.setDate(start.getDate() - 1);
+                else if (v === "7") start.setDate(start.getDate() - 7);
+                else if (v === "14") start.setDate(start.getDate() - 14);
+                else if (v === "30") start.setDate(start.getDate() - 30);
+                else if (v === "90") start.setDate(start.getDate() - 90);
+                setFrom(start);
+                setTo(now);
+              }}
+            >
+              <SelectTrigger className="w-32"><SelectValue placeholder="Preset" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="1">Last 24h</SelectItem>
                 <SelectItem value="7">Last 7 days</SelectItem>
@@ -81,6 +117,29 @@ function FunnelPage() {
                 <SelectItem value="90">Last 90 days</SelectItem>
               </SelectContent>
             </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="w-[130px] justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(from, "MMM d")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={from} onSelect={(d) => d && setFrom(d)} initialFocus />
+              </PopoverContent>
+            </Popover>
+            <span className="text-muted-foreground text-sm">→</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="w-[130px] justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(to, "MMM d")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={to} onSelect={(d) => d && setTo(d)} initialFocus />
+              </PopoverContent>
+            </Popover>
             <Button variant="outline" size="icon" onClick={load} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>

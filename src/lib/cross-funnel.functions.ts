@@ -3,7 +3,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const Schema = z.object({
-  days: z.number().int().min(1).max(90).default(7),
+  from: z.string().min(1),
+  to: z.string().min(1),
   linkIds: z.array(z.string().uuid()).max(50).optional(),
 });
 
@@ -18,7 +19,6 @@ export const getCrossLinkFunnel = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Schema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const since = new Date(Date.now() - data.days * 24 * 3600 * 1000).toISOString();
 
     let linksQ = supabase
       .from("links")
@@ -37,7 +37,8 @@ export const getCrossLinkFunnel = createServerFn({ method: "POST" })
       .from("clicks")
       .select("link_id,is_bot,bot_reason")
       .in("link_id", ids)
-      .gte("created_at", since)
+      .gte("created_at", data.from)
+      .lte("created_at", data.to)
       .limit(50000);
 
     const clicks = (clicksRaw ?? []) as ClickRow[];
