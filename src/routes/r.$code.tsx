@@ -38,27 +38,23 @@ const resolveLink = createServerFn({ method: "POST" })
       bot_reason: botReason,
     });
 
-    // Increment counter
+    // Increment counter (read-modify-write)
     if (isBot) {
-      await supabaseAdmin.rpc("increment_bot_count" as never, { link_id_in: link.id } as never).then(() => {});
-      await supabaseAdmin
-        .from("links")
-        .update({ bot_clicks_count: 0 })
-        .eq("id", link.id);
-    }
-
-    // Simpler: just refetch + increment
-    const field = isBot ? "bot_clicks_count" : "clicks_count";
-    const { data: current } = await supabaseAdmin
-      .from("links")
-      .select(field)
-      .eq("id", link.id)
-      .single();
-    if (current) {
-      await supabaseAdmin
-        .from("links")
-        .update({ [field]: (current as Record<string, number>)[field] + 1 })
-        .eq("id", link.id);
+      const { data: current } = await supabaseAdmin
+        .from("links").select("bot_clicks_count").eq("id", link.id).single();
+      if (current) {
+        await supabaseAdmin.from("links")
+          .update({ bot_clicks_count: current.bot_clicks_count + 1 })
+          .eq("id", link.id);
+      }
+    } else {
+      const { data: current } = await supabaseAdmin
+        .from("links").select("clicks_count").eq("id", link.id).single();
+      if (current) {
+        await supabaseAdmin.from("links")
+          .update({ clicks_count: current.clicks_count + 1 })
+          .eq("id", link.id);
+      }
     }
 
     return {
