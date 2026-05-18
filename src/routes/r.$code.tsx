@@ -94,6 +94,51 @@ function rowToVariant(r: {
   };
 }
 
+// ---------- Protection config + rate limit ----------
+
+type ProtectionConfig = {
+  ip_rate_limit_per_min: number;
+  ip_rate_limit_window_sec: number;
+  suspicious_action: "block" | "safe_page" | "allow";
+  block_threshold_score: number;
+  safe_page_message: string;
+};
+
+const DEFAULT_PROTECTION: ProtectionConfig = {
+  ip_rate_limit_per_min: 30,
+  ip_rate_limit_window_sec: 60,
+  suspicious_action: "safe_page",
+  block_threshold_score: 60,
+  safe_page_message:
+    "This article is temporarily unavailable. Please check back later.",
+};
+
+async function loadProtection(): Promise<ProtectionConfig> {
+  const { data } = await supabaseAdmin
+    .from("bot_protection_config")
+    .select("ip_rate_limit_per_min,ip_rate_limit_window_sec,suspicious_action,block_threshold_score,safe_page_message")
+    .eq("id", 1)
+    .maybeSingle();
+  if (!data) return DEFAULT_PROTECTION;
+  return {
+    ...DEFAULT_PROTECTION,
+    ...data,
+    suspicious_action: (data.suspicious_action as ProtectionConfig["suspicious_action"]) ?? "safe_page",
+  };
+}
+
+async function ipExceedsRate(ip: string, cfg: ProtectionConfig): Promise<number> {
+  if (!ip) return 0;
+  const since = new Date(Date.now() - cfg.ip_rate_limit_window_sec * 1000).toISOString();
+  const { count } = await supabaseAdmin
+    .from("clicks")
+    .select("id", { count: "exact", head: true })
+    .eq("ip_address", ip)
+    .gte("created_at", since);
+  const perMinEquivalent = ((count ?? 0) * 60) / Math.max(1, cfg.ip_rate_limit_window_sec);
+  return perMinEquivalent > cfg.ip_rate_limit_per_min ? count ?? 0 : 0;
+}
+
 // ---------- Server functions ----------
 
 const resolveLink = createServerFn({ method: "POST" })
@@ -109,6 +154,8 @@ const resolveLink = createServerFn({ method: "POST" })
     const country = getRequestHeader("cf-ipcountry") || null;
     const referer = getRequestHeader("referer") || "";
 
+    const cfg = await loadProtection();
+
     const { data: link } = await supabaseAdmin
       .from("links")
       .select("id, status")
@@ -116,6 +163,67 @@ const resolveLink = createServerFn({ method: "POST" })
       .maybeSingle();
 
     if (!link || link.status !== "active") return { found: false as const };
+
+    // IP velocity check
+    const rateHits = await ipExceedsRate(ip, cfg);
+    const rateLimited = rateHits > 0;
+
+    // Aggregate suspicion: pre-flag bot OR rate-limited OR over hard threshold
+    const suspicious =
+      a.isBot || rateLimited || a.score >= cfg.block_threshold_score;
+
+    const suspicionReasons = [
+      a.reasons,
+      rateLimited ? `rate:${rateHits}/${cfg.ip_rate_limit_window_sec}s` : "",
+    ].filter(Boolean).join(",");
+
+    // Hard block path
+    if (suspicious && cfg.suspicious_action === "block") {
+      const uaInfoB = parseUA(a.ua);
+      await supabaseAdmin.from("clicks").insert({
+        link_id: link.id,
+        ip_address: ip || null,
+        country,
+        user_agent: a.ua || null,
+        referer: referer || null,
+        is_bot: true,
+        bot_reason: `blocked:${suspicionReasons}`,
+        device: uaInfoB.device,
+        os: uaInfoB.os,
+        browser: uaInfoB.browser,
+        variant: null,
+      });
+      return {
+        found: true as const,
+        blocked: true as const,
+        safe: false as const,
+        message: cfg.safe_page_message,
+      };
+    }
+
+    // Safe page path — show innocuous content, never reveal destination
+    if (suspicious && cfg.suspicious_action === "safe_page") {
+      const uaInfoS = parseUA(a.ua);
+      await supabaseAdmin.from("clicks").insert({
+        link_id: link.id,
+        ip_address: ip || null,
+        country,
+        user_agent: a.ua || null,
+        referer: referer || null,
+        is_bot: true,
+        bot_reason: `safe:${suspicionReasons}`,
+        device: uaInfoS.device,
+        os: uaInfoS.os,
+        browser: uaInfoS.browser,
+        variant: null,
+      });
+      return {
+        found: true as const,
+        blocked: false as const,
+        safe: true as const,
+        message: cfg.safe_page_message,
+      };
+    }
 
     // Load active variants from DB
     const { data: variantRows } = await supabaseAdmin
@@ -126,12 +234,10 @@ const resolveLink = createServerFn({ method: "POST" })
 
     const variants: Variant[] = (variantRows ?? []).map(rowToVariant);
     if (variants.length === 0) {
-      // No content configured — bail out gracefully.
       return { found: false as const };
     }
     const slugs = variants.map((v) => v.slug);
 
-    // Admin override (per-link forced winner) takes precedence
     const { data: override } = await supabaseAdmin
       .from("link_variant_overrides")
       .select("variant_slug")
@@ -142,7 +248,6 @@ const resolveLink = createServerFn({ method: "POST" })
     if (override && slugs.includes(override.variant_slug)) {
       chosenSlug = override.variant_slug;
     } else {
-      // Bandit on REAL conversion (verify rows only)
       const { data: recent } = await supabaseAdmin
         .from("clicks")
         .select("variant,is_bot,bot_reason")
@@ -174,7 +279,7 @@ const resolveLink = createServerFn({ method: "POST" })
       user_agent: a.ua || null,
       referer: referer || null,
       is_bot: a.isBot,
-      bot_reason: a.reasons || null,
+      bot_reason: suspicionReasons || null,
       device: uaInfo.device,
       os: uaInfo.os,
       browser: uaInfo.browser,
@@ -193,6 +298,8 @@ const resolveLink = createServerFn({ method: "POST" })
 
     return {
       found: true as const,
+      blocked: false as const,
+      safe: false as const,
       linkId: link.id,
       variant: chosenVariant,
       preFlagBot: a.isBot,
@@ -247,8 +354,16 @@ const verifyHuman = createServerFn({ method: "POST" })
       return { ok: false as const, reason: "not-found" };
     }
 
+    // Re-check protection at verification time (fresh IP velocity)
+    const cfg = await loadProtection();
+    const rateHits = await ipExceedsRate(ip, cfg);
+
     let score = a.score;
     const reasons: string[] = a.reasons ? [a.reasons] : [];
+    if (rateHits > 0) {
+      score += 60;
+      reasons.push(`rate:${rateHits}/${cfg.ip_rate_limit_window_sec}s`);
+    }
     const fp = data.fp;
 
     if (fp.webdriver) { score += 80; reasons.push("webdriver"); }
@@ -276,7 +391,7 @@ const verifyHuman = createServerFn({ method: "POST" })
       score += 25; reasons.push("ua-mismatch");
     }
 
-    const isBot = score >= 60;
+    const isBot = score >= cfg.block_threshold_score;
 
     const uaInfo2 = parseUA(a.ua);
     await supabaseAdmin.from("clicks").insert({
@@ -406,10 +521,45 @@ function collectFingerprint(metrics: {
   };
 }
 
+function SafePage({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-border">
+        <div className="mx-auto max-w-3xl px-6 py-5">
+          <span className="font-bold tracking-tight text-lg">Daily Reads</span>
+        </div>
+      </header>
+      <main className="mx-auto max-w-3xl px-6 py-20 text-center">
+        <h1 className="text-3xl font-bold mb-4">Article unavailable</h1>
+        <p className="text-muted-foreground">{message}</p>
+      </main>
+    </div>
+  );
+}
+
+function BlockedPage({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-6">
+      <div className="max-w-md text-center">
+        <h1 className="text-2xl font-bold mb-3">Access denied</h1>
+        <p className="text-sm text-muted-foreground">{message}</p>
+      </div>
+    </div>
+  );
+}
+
 function PreLanderPage() {
   const { code } = Route.useParams();
   const loaderData = Route.useLoaderData();
-  const variant = loaderData.variant;
+
+  if (loaderData.blocked) return <BlockedPage message={loaderData.message} />;
+  if (loaderData.safe) return <SafePage message={loaderData.message} />;
+
+  const variant = loaderData.variant!;
+  return <PreLanderInner code={code} variant={variant} />;
+}
+
+function PreLanderInner({ code, variant }: { code: string; variant: Variant }) {
   const verify = useServerFn(verifyHuman);
   const [status, setStatus] = useState<"reading" | "verifying" | "redirecting" | "blocked">("reading");
   const [countdown, setCountdown] = useState(3);
