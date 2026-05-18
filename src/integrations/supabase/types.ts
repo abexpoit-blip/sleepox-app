@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      bot_protection_config: {
+        Row: {
+          block_threshold_score: number
+          id: number
+          ip_rate_limit_per_min: number
+          ip_rate_limit_window_sec: number
+          safe_page_message: string
+          suspicious_action: string
+          updated_at: string
+        }
+        Insert: {
+          block_threshold_score?: number
+          id?: number
+          ip_rate_limit_per_min?: number
+          ip_rate_limit_window_sec?: number
+          safe_page_message?: string
+          suspicious_action?: string
+          updated_at?: string
+        }
+        Update: {
+          block_threshold_score?: number
+          id?: number
+          ip_rate_limit_per_min?: number
+          ip_rate_limit_window_sec?: number
+          safe_page_message?: string
+          suspicious_action?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clicks: {
         Row: {
           bot_reason: string | null
