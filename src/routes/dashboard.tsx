@@ -270,12 +270,30 @@ function Dashboard() {
                   className="h-8 w-56 pl-8 text-sm"
                 />
               </div>
-              <div className="hidden md:flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <span className={`flex h-1.5 w-1.5 rounded-full ${autoRefresh ? "bg-success animate-pulse" : "bg-muted-foreground/50"}`} />
-                <span>
-                  {autoRefresh ? "Auto · 30s" : "Paused"}
-                  {lastUpdated ? ` · ${lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}
-                </span>
+              <div className="hidden md:flex items-center gap-2 text-[11px] text-muted-foreground">
+                {analyticsLoading ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                    <span className="text-primary">Refreshing…</span>
+                  </>
+                ) : refreshError ? (
+                  <>
+                    <AlertCircle className="h-3 w-3 text-destructive" />
+                    <span className="text-destructive">Refresh failed</span>
+                  </>
+                ) : (
+                  <>
+                    <span className={`flex h-1.5 w-1.5 rounded-full ${autoRefresh ? "bg-success animate-pulse" : "bg-muted-foreground/50"}`} />
+                    <span>
+                      {autoRefresh ? "Auto · 30s" : "Paused"}
+                    </span>
+                  </>
+                )}
+                {lastUpdated && !analyticsLoading && (
+                  <span className="text-muted-foreground/70">
+                    · {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                  </span>
+                )}
               </div>
               <Button
                 variant="ghost"
