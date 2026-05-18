@@ -4,6 +4,9 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
+import { parseUA } from "@/lib/ua";
+
+const PRELANDER_VARIANT = "wellness";
 
 // ---------- Server-side helpers ----------
 
