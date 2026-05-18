@@ -590,8 +590,17 @@ function Dashboard() {
                       Active Links
                     </span>
                   </div>
-                  <div className="mt-3 font-display text-3xl font-bold">{stats.totalLinks}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">Total campaigns in rotation</div>
+                  {analyticsLoading ? (
+                    <div className="mt-3 space-y-2">
+                      <div className="h-8 w-16 animate-pulse rounded-lg bg-muted" />
+                      <div className="h-4 w-40 animate-pulse rounded bg-muted" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mt-3 font-display text-3xl font-bold">{stats.totalLinks}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">Total campaigns in rotation</div>
+                    </>
+                  )}
                 </div>
 
                 <div
