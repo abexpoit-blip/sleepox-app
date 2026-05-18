@@ -16,6 +16,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as AnalyticsLinkIdRouteImport } from './routes/analytics.$linkId'
 import { Route as AdminVariantsRouteImport } from './routes/admin.variants'
 import { Route as AdminRotationRouteImport } from './routes/admin.rotation'
 import { Route as AdminProtectionRouteImport } from './routes/admin.protection'
@@ -55,6 +56,11 @@ const RCodeRoute = RCodeRouteImport.update({
   path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnalyticsLinkIdRoute = AnalyticsLinkIdRouteImport.update({
+  id: '/$linkId',
+  path: '/$linkId',
+  getParentRoute: () => AnalyticsRoute,
+} as any)
 const AdminVariantsRoute = AdminVariantsRouteImport.update({
   id: '/admin/variants',
   path: '/admin/variants',
@@ -73,7 +79,7 @@ const AdminProtectionRoute = AdminProtectionRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
+  '/analytics': typeof AnalyticsRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
@@ -81,11 +87,12 @@ export interface FileRoutesByFullPath {
   '/admin/protection': typeof AdminProtectionRoute
   '/admin/rotation': typeof AdminRotationRoute
   '/admin/variants': typeof AdminVariantsRoute
+  '/analytics/$linkId': typeof AnalyticsLinkIdRoute
   '/r/$code': typeof RCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
+  '/analytics': typeof AnalyticsRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
@@ -93,12 +100,13 @@ export interface FileRoutesByTo {
   '/admin/protection': typeof AdminProtectionRoute
   '/admin/rotation': typeof AdminRotationRoute
   '/admin/variants': typeof AdminVariantsRoute
+  '/analytics/$linkId': typeof AnalyticsLinkIdRoute
   '/r/$code': typeof RCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
+  '/analytics': typeof AnalyticsRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/admin/protection': typeof AdminProtectionRoute
   '/admin/rotation': typeof AdminRotationRoute
   '/admin/variants': typeof AdminVariantsRoute
+  '/analytics/$linkId': typeof AnalyticsLinkIdRoute
   '/r/$code': typeof RCodeRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/admin/protection'
     | '/admin/rotation'
     | '/admin/variants'
+    | '/analytics/$linkId'
     | '/r/$code'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/admin/protection'
     | '/admin/rotation'
     | '/admin/variants'
+    | '/analytics/$linkId'
     | '/r/$code'
   id:
     | '__root__'
@@ -144,12 +155,13 @@ export interface FileRouteTypes {
     | '/admin/protection'
     | '/admin/rotation'
     | '/admin/variants'
+    | '/analytics/$linkId'
     | '/r/$code'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AnalyticsRoute: typeof AnalyticsRoute
+  AnalyticsRoute: typeof AnalyticsRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
@@ -211,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/analytics/$linkId': {
+      id: '/analytics/$linkId'
+      path: '/$linkId'
+      fullPath: '/analytics/$linkId'
+      preLoaderRoute: typeof AnalyticsLinkIdRouteImport
+      parentRoute: typeof AnalyticsRoute
+    }
     '/admin/variants': {
       id: '/admin/variants'
       path: '/admin/variants'
@@ -235,9 +254,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AnalyticsRouteChildren {
+  AnalyticsLinkIdRoute: typeof AnalyticsLinkIdRoute
+}
+
+const AnalyticsRouteChildren: AnalyticsRouteChildren = {
+  AnalyticsLinkIdRoute: AnalyticsLinkIdRoute,
+}
+
+const AnalyticsRouteWithChildren = AnalyticsRoute._addFileChildren(
+  AnalyticsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AnalyticsRoute: AnalyticsRoute,
+  AnalyticsRoute: AnalyticsRouteWithChildren,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
@@ -250,3 +281,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
