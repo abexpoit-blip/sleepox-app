@@ -117,6 +117,26 @@ const resolveLink = createServerFn({ method: "POST" })
 
     if (!link || link.status !== "active") return { found: false as const };
 
+    // ---- A/B variant selection (epsilon-greedy per link) ----
+    const { data: recent } = await supabaseAdmin
+      .from("clicks")
+      .select("variant,is_bot")
+      .eq("link_id", link.id)
+      .not("variant", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1500);
+
+    const statsMap = new Map<VariantId, { id: VariantId; total: number; humans: number }>();
+    for (const id of VARIANT_IDS) statsMap.set(id, { id, total: 0, humans: 0 });
+    for (const r of recent ?? []) {
+      const v = r.variant as VariantId | null;
+      if (!v || !statsMap.has(v)) continue;
+      const e = statsMap.get(v)!;
+      e.total += 1;
+      if (!r.is_bot) e.humans += 1;
+    }
+    const chosenVariant = pickVariant([...statsMap.values()]);
+
     const uaInfo = parseUA(a.ua);
     await supabaseAdmin.from("clicks").insert({
       link_id: link.id,
@@ -129,7 +149,7 @@ const resolveLink = createServerFn({ method: "POST" })
       device: uaInfo.device,
       os: uaInfo.os,
       browser: uaInfo.browser,
-      variant: PRELANDER_VARIANT,
+      variant: chosenVariant,
     });
 
     if (a.isBot) {
@@ -142,10 +162,10 @@ const resolveLink = createServerFn({ method: "POST" })
       }
     }
 
-    // NEVER return destination here — even humans must pass client verification
     return {
       found: true as const,
       linkId: link.id,
+      variant: chosenVariant,
       preFlagBot: a.isBot,
       serverScore: a.score,
     };
