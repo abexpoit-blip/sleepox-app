@@ -134,6 +134,10 @@ export const getLinkMonitor = createServerFn({ method: "POST" })
       byDevice: bucket((c) => c.device),
       byBrowser: bucket((c) => c.browser).slice(0, 10),
       byOS: bucket((c) => c.os).slice(0, 10),
+      bySource: bucket((c) => c.utm_source).slice(0, 15),
+      byMedium: bucket((c) => c.utm_medium).slice(0, 10),
+      byCampaign: bucket((c) => c.utm_campaign).slice(0, 15),
+      byReferer: bucket((c) => c.referer_host).slice(0, 15),
       recent,
     };
   });
