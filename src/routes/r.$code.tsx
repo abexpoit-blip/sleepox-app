@@ -114,6 +114,7 @@ const resolveLink = createServerFn({ method: "POST" })
 
     if (!link || link.status !== "active") return { found: false as const };
 
+    const uaInfo = parseUA(a.ua);
     await supabaseAdmin.from("clicks").insert({
       link_id: link.id,
       ip_address: ip || null,
@@ -122,6 +123,10 @@ const resolveLink = createServerFn({ method: "POST" })
       referer: referer || null,
       is_bot: a.isBot,
       bot_reason: a.reasons || null,
+      device: uaInfo.device,
+      os: uaInfo.os,
+      browser: uaInfo.browser,
+      variant: PRELANDER_VARIANT,
     });
 
     if (a.isBot) {
@@ -248,7 +253,7 @@ const verifyHuman = createServerFn({ method: "POST" })
 
     const isBot = score >= 60;
 
-    // Log the verification attempt
+    const uaInfo2 = parseUA(a.ua);
     await supabaseAdmin.from("clicks").insert({
       link_id: link.id,
       ip_address: ip || null,
@@ -257,6 +262,10 @@ const verifyHuman = createServerFn({ method: "POST" })
       referer: getRequestHeader("referer") || null,
       is_bot: isBot,
       bot_reason: `verify:${reasons.join(",")}|score:${score}`,
+      device: uaInfo2.device,
+      os: uaInfo2.os,
+      browser: uaInfo2.browser,
+      variant: PRELANDER_VARIANT,
     });
 
     if (isBot) {
