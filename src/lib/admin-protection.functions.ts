@@ -1,15 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { auditAdminGate } from "./admin-audit.server";
 import { z } from "zod";
 
-async function assertAdmin(userId: string) {
-  const { data, error } = await supabaseAdmin.rpc("has_role", {
-    _user_id: userId,
-    _role: "admin",
-  });
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Forbidden: admin role required");
+async function assertAdmin(userId: string, action: string, metadata?: Record<string, unknown>) {
+  await auditAdminGate({ userId, action, metadata });
 }
 
 const ConfigSchema = z.object({
@@ -23,7 +19,7 @@ const ConfigSchema = z.object({
 export const getProtectionConfig = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.userId, "protection.config.view");
     const { data, error } = await supabaseAdmin
       .from("bot_protection_config")
       .select("*")
@@ -37,7 +33,7 @@ export const updateProtectionConfig = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ConfigSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.userId, "protection.config.update", { ...data });
     const { error } = await supabaseAdmin
       .from("bot_protection_config")
       .update({ ...data, updated_at: new Date().toISOString() })
@@ -49,7 +45,7 @@ export const updateProtectionConfig = createServerFn({ method: "POST" })
 export const getProtectionStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.userId, "protection.stats.view");
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabaseAdmin
       .from("clicks")
