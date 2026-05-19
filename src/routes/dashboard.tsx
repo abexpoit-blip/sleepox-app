@@ -188,20 +188,10 @@ function Dashboard() {
       setCreating(false);
       return;
     }
-    const trimmedAdsterra = adsterraUrl.trim();
-    if (trimmedAdsterra) {
-      try { new URL(trimmedAdsterra); }
-      catch {
-        toast.error("Invalid Adsterra Direct Link URL");
-        setCreating(false);
-        return;
-      }
-    }
     const { error } = await supabase.from("links").insert({
       user_id: userData.user.id,
       short_code: genCode(),
       destination_url: url,
-      adsterra_direct_link: trimmedAdsterra || null,
       title: title || null,
     });
     setCreating(false);
@@ -209,7 +199,6 @@ function Dashboard() {
     toast.success("Link created");
     setUrl("");
     setTitle("");
-    setAdsterraUrl("");
     load();
   };
 
