@@ -703,6 +703,18 @@ function Dashboard() {
                         onChange={(e) => setTitle(e.target.value)}
                       />
                     </div>
+                    <div>
+                      <Label htmlFor="adsterra" className="sr-only">
+                        Adsterra Direct Link
+                      </Label>
+                      <Input
+                        id="adsterra"
+                        type="url"
+                        placeholder="Adsterra Direct Link (optional — overrides destination for real users)"
+                        value={adsterraUrl}
+                        onChange={(e) => setAdsterraUrl(e.target.value)}
+                      />
+                    </div>
                     <Button type="submit" disabled={creating} className="gap-1.5 shadow-glow">
                       <Plus className="h-4 w-4" /> {creating ? "Creating..." : "Create link"}
                     </Button>
