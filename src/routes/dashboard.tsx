@@ -700,6 +700,58 @@ function Dashboard() {
                 </div>
               </div>
 
+              {/* Real-time Traffic Breakdown — Device / Browser / OS */}
+              <div className="grid gap-4 lg:grid-cols-3">
+                {([
+                  { title: "By Device", rows: analytics?.byDevice ?? [] },
+                  { title: "By Browser", rows: analytics?.byBrowser ?? [] },
+                  { title: "By OS", rows: analytics?.byOS ?? [] },
+                ] as const).map((panel) => {
+                  const top = panel.rows.slice(0, 6);
+                  const maxTotal = Math.max(1, ...top.map((r) => r.total));
+                  return (
+                    <div key={panel.title} className="relative overflow-hidden rounded-2xl border border-border bg-card-gradient shadow-card">
+                      <div className="border-b border-border/60 px-5 py-3">
+                        <h3 className="font-display text-sm font-semibold">{panel.title}</h3>
+                        <p className="text-[11px] text-muted-foreground">Real users vs bots · {rangeLabel}</p>
+                      </div>
+                      <div className="p-5 space-y-3">
+                        {analyticsLoading ? (
+                          [1, 2, 3, 4].map((i) => (
+                            <div key={i} className="h-8 animate-pulse rounded-md bg-secondary/60" />
+                          ))
+                        ) : top.length === 0 ? (
+                          <p className="text-xs text-muted-foreground py-4 text-center">No data yet</p>
+                        ) : (
+                          top.map((row) => {
+                            const humanPct = (row.humans / maxTotal) * 100;
+                            const botPct = (row.bots / maxTotal) * 100;
+                            const passRate = row.total ? (row.humans / row.total) * 100 : 0;
+                            return (
+                              <div key={row.key} className="space-y-1">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="font-medium capitalize truncate max-w-[60%]">{row.key}</span>
+                                  <span className="text-muted-foreground tabular-nums">
+                                    <span className="text-success">{row.humans}</span>
+                                    {" / "}
+                                    <span className="text-destructive">{row.bots}</span>
+                                    <span className="ml-1.5 text-foreground/70">({passRate.toFixed(0)}%)</span>
+                                  </span>
+                                </div>
+                                <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-secondary/60">
+                                  <div className="bg-success" style={{ width: `${humanPct}%` }} />
+                                  <div className="bg-destructive/80" style={{ width: `${botPct}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
               {/* Links table */}
               <div className="relative overflow-hidden rounded-2xl border border-border bg-card-gradient shadow-card">
                 <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
