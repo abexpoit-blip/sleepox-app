@@ -95,7 +95,12 @@ function AdminUsersPage() {
     try {
       await mutateRole({ data: { userId: m.id, role: "admin", action } });
       toast.success(`Admin role ${action === "grant" ? "granted" : "revoked"}.`);
-      await refresh();
+      setMembers((rows) => rows.map((row) => row.id === m.id ? {
+        ...row,
+        roles: action === "grant"
+          ? Array.from(new Set([...row.roles, "admin"]))
+          : row.roles.filter((r) => r !== "admin"),
+      } : row));
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -122,7 +127,11 @@ function AdminUsersPage() {
       await mutatePlan({ data: { userId: target.id, planSlug, linkQuota: Number.isFinite(q) ? q : undefined } });
       toast.success("Plan updated");
       setOpenKind(null);
-      await refresh();
+      setMembers((rows) => rows.map((row) => row.id === target.id ? {
+        ...row,
+        plan_slug: planSlug,
+        link_quota: Number.isFinite(q) ? (q as number) : row.link_quota,
+      } : row));
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally { setModalBusy(false); }
@@ -137,7 +146,7 @@ function AdminUsersPage() {
       const res = await mutateTopUp({ data: { userId: target.id, addQuota: n } });
       toast.success(`Quota topped up. New total: ${res.newQuota}`);
       setOpenKind(null);
-      await refresh();
+      setMembers((rows) => rows.map((row) => row.id === target.id ? { ...row, link_quota: res.newQuota } : row));
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally { setModalBusy(false); }
