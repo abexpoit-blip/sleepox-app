@@ -119,7 +119,7 @@ function PreLanderPage() {
   return <PreLanderInner code={code} variant={variant} silent={Boolean(loaderData.silentBot)} />;
 }
 
-function PreLanderInner({ code, variant }: { code: string; variant: Variant }) {
+function PreLanderInner({ code, variant, silent }: { code: string; variant: Variant; silent: boolean }) {
   const verify = useServerFn(verifyHuman);
   const [status, setStatus] = useState<"reading" | "verifying" | "redirecting" | "blocked">("reading");
   const [countdown, setCountdown] = useState(3);
