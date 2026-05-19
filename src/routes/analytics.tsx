@@ -137,10 +137,14 @@ type Analytics = Awaited<ReturnType<typeof getAnalytics>>;
 
 function AnalyticsPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const fetchAnalytics = useServerFn(getAnalytics);
   const { days, linkId } = Route.useSearch();
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hidden, setHidden] = useState<Record<string, boolean>>({});
+  const toggleSeries = (key: string) =>
+    setHidden((h) => ({ ...h, [key]: !h[key] }));
 
   const setDays = (n: number) =>
     navigate({ to: "/analytics", search: (prev: AnalyticsSearch) => ({ ...prev, days: n }), replace: true });
