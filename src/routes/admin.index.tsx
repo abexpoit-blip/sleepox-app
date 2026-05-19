@@ -23,13 +23,15 @@ function AdminDashboard() {
     queryKey: ["admin", "overview"],
     queryFn: () => fn(),
     enabled: isAdmin === true,
-    refetchInterval: 30000,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
   });
   const { data: adv, isLoading: advLoading } = useQuery({
     queryKey: ["admin", "advanced"],
     queryFn: () => advFn(),
     enabled: isAdmin === true,
-    refetchInterval: 30000,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
   });
 
 
