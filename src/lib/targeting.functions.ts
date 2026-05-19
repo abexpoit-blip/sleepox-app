@@ -4,7 +4,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const linkIdSchema = z.object({ linkId: z.string().uuid() });
 
-async function assertOwner(supabase: ReturnType<typeof requireSupabaseAuth> extends never ? never : any, linkId: string, userId: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function assertOwner(supabase: any, linkId: string, userId: string) {
   const { data, error } = await supabase
     .from("links")
     .select("id,user_id,duplicate_protection,duplicate_window_minutes,short_code,title")
