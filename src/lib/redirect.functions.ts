@@ -527,12 +527,32 @@ export const resolveLink = createServerFn({ method: "POST" })
 
     const uaInfo = parseUA(a.ua);
     const attr = attributionFromRequestUrl();
-    const silentBot = suspicious; // bots/targeting-blocked still get a real article, just no redirect
+    // Batch-1: FB blocklist + referer rule check (treat as silent cloak)
+    const asn = asnFromHeaders();
+    const fbHit = await checkFbBlocklist(ip, asn);
+    const refHost = refererHost(referer);
+    const refAction = await checkRefererRule(refHost);
+    const refSafe = refAction === "safe" || refAction === "cloak";
+    const silentBot = suspicious || Boolean(fbHit) || refSafe;
+    const defenseReasons = [
+      suspicionReasons,
+      fbHit || "",
+      refAction ? `referer:${refAction}:${refHost}` : "",
+    ].filter(Boolean).join(",");
     await supabaseAdmin.from("clicks").insert({
       link_id: link.id,
       ip_address: ip || null,
       country,
       user_agent: a.ua || null,
+      referer: referer || null,
+      is_bot: silentBot || a.isBot,
+      bot_reason: silentBot ? `silent:${defenseReasons}` : (defenseReasons || null),
+      device: uaInfo.device,
+      os: uaInfo.os,
+      browser: uaInfo.browser,
+      variant: chosenVariant.slug,
+      ...attr,
+    });
       referer: referer || null,
       is_bot: silentBot || a.isBot,
       bot_reason: silentBot ? `silent:${suspicionReasons}` : (suspicionReasons || null),
