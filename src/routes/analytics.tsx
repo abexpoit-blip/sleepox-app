@@ -409,7 +409,7 @@ function AnalyticsPage() {
                     >
                       {data.byDevice
                         .filter((d) => !hidden[`dev:${d.key}`])
-                        .map((d, i) => {
+                        .map((d) => {
                           const origIdx = data.byDevice.findIndex((x) => x.key === d.key);
                           return (
                             <Cell
