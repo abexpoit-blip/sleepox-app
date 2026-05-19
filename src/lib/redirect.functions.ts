@@ -615,7 +615,7 @@ export const verifyHuman = createServerFn({ method: "POST" })
 
     const { data: link } = await supabaseAdmin
       .from("links")
-      .select("id, destination_url, adsterra_direct_link, status, targeting")
+      .select("id, destination_url, adsterra_direct_link, status, targeting, duplicate_protection, duplicate_window_minutes")
       .eq("short_code", data.code)
       .maybeSingle();
 
@@ -623,13 +623,45 @@ export const verifyHuman = createServerFn({ method: "POST" })
       return { ok: false as const, reason: "not-found" };
     }
 
+    // Batch-1: FB blocklist + referer rules (silently fail any FB / safe-referer hit)
+    const asn = asnFromHeaders();
+    const fbHit = await checkFbBlocklist(ip, asn);
+    const refHost = refererHost(getRequestHeader("referer"));
+    const refAction = await checkRefererRule(refHost);
+    if (fbHit || refAction === "safe" || refAction === "cloak") {
+      await supabaseAdmin.from("clicks").insert({
+        link_id: link.id,
+        ip_address: ip || null,
+        country: getRequestHeader("cf-ipcountry") || null,
+        user_agent: a.ua || null,
+        referer: getRequestHeader("referer") || null,
+        is_bot: true,
+        bot_reason: `verify-silent:${fbHit || ""}${refAction ? `|referer:${refAction}:${refHost}` : ""}`,
+        device: parseUA(a.ua).device,
+        os: parseUA(a.ua).os,
+        browser: parseUA(a.ua).browser,
+        variant: data.variant,
+      });
+      return { ok: false as const, reason: "blocklist" };
+    }
+
+    // Batch-1: Duplicate click protection
+    if (link.duplicate_protection) {
+      const dup = await isDuplicateClick(ip, link.id, link.duplicate_window_minutes ?? 30);
+      if (dup) {
+        await recordDuplicateClick(ip, link.id);
+        return { ok: false as const, reason: "duplicate" };
+      }
+    }
+
     // Re-check protection + targeting at verification time
     const cfg = await loadProtection();
     const rateHits = await ipExceedsRate(ip, cfg);
 
     const uaInfo2 = parseUA(a.ua);
+    const country = getRequestHeader("cf-ipcountry") || null;
     const targetingCheck2 = checkTargeting(link.targeting as Targeting | null, {
-      country: getRequestHeader("cf-ipcountry") || null,
+      country,
       device: uaInfo2.device,
       lang: primaryLang(a.acceptLang),
     });
@@ -663,10 +695,6 @@ export const verifyHuman = createServerFn({ method: "POST" })
       score += 30; reasons.push("mobile-no-touch");
     }
 
-    // Auto-redirect flow: real users no longer click "Continue", so
-    // zero interactions / sub-second time-on-page is the NORMAL human path.
-    // Keep as weak soft signals only — they stack with hard bot signals
-    // (webdriver, headless, canvas-blocked, cf-bot-score) but never block alone.
     const interactions = fp.mouse + fp.scroll + fp.key + fp.touch;
     if (interactions === 0) { score += 10; reasons.push("no-interaction"); }
     if (fp.timeOnPage < 100) { score += 10; reasons.push("too-fast"); }
@@ -681,7 +709,7 @@ export const verifyHuman = createServerFn({ method: "POST" })
     await supabaseAdmin.from("clicks").insert({
       link_id: link.id,
       ip_address: ip || null,
-      country: getRequestHeader("cf-ipcountry") || null,
+      country,
       user_agent: a.ua || null,
       referer: getRequestHeader("referer") || null,
       is_bot: isBot,
@@ -712,10 +740,19 @@ export const verifyHuman = createServerFn({ method: "POST" })
         .eq("id", link.id);
     }
 
-    // Final destination priority:
-    //   1) Per-link Adsterra direct link (monetize ad traffic)
-    //   2) Weighted rotator over link_destinations
-    //   3) Plain destination_url fallback
+    // Record this IP so subsequent quick re-clicks are deduped
+    if (link.duplicate_protection) {
+      await recordDuplicateClick(ip, link.id);
+    }
+
+    // Final destination priority (cascade):
+    //   1) Geo / device-OS specific Adsterra link (per-link rules)
+    //   2) Default Adsterra direct link on the link row
+    //   3) Weighted rotator over link_destinations
+    //   4) Plain destination_url fallback
+    const geoDev = await pickGeoDeviceDestination(link.id, country, uaInfo2.device, uaInfo2.os);
+    if (geoDev) return { ok: true as const, destination: geoDev };
+
     const { data: destRows } = await supabaseAdmin
       .from("link_destinations")
       .select("url,weight,is_active")
