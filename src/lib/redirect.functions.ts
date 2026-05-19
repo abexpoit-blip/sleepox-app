@@ -653,7 +653,7 @@ export const verifyHuman = createServerFn({ method: "POST" })
 
     const { data: link } = await supabaseAdmin
       .from("links")
-      .select("id, destination_url, adsterra_direct_link, status, targeting, duplicate_protection, duplicate_window_minutes")
+      .select("id, destination_url, status, targeting, duplicate_protection, duplicate_window_minutes")
       .eq("short_code", data.code)
       .maybeSingle();
 
