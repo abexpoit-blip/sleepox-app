@@ -62,29 +62,29 @@ function AdminDashboard() {
       {/* ambient glow */}
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 bg-gradient-to-b from-primary/10 via-transparent to-transparent" />
 
-      <div className="mx-auto max-w-7xl space-y-8 p-6 md:p-8">
+      <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 md:space-y-8 md:p-8">
         {/* Hero */}
         <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
+          <div className="min-w-0">
             <Badge variant="outline" className="mb-2 gap-1.5 border-primary/30 bg-primary/5 text-primary">
               <Activity className="h-3 w-3" /> Admin Console
             </Badge>
-            <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">
+            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
               Welcome back, operator.
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
               Live overview of users, traffic, revenue requests and infrastructure.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link to="/admin/payments"><Button variant="default" className="gap-2">Review requests <ArrowRight className="h-4 w-4" /></Button></Link>
-            <Link to="/admin/packages"><Button variant="outline">Packages</Button></Link>
-            <Link to="/admin/users"><Button variant="outline">Members</Button></Link>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+            <Link to="/admin/payments"><Button size="sm" variant="default" className="shrink-0 gap-2">Review requests <ArrowRight className="h-4 w-4" /></Button></Link>
+            <Link to="/admin/packages"><Button size="sm" variant="outline" className="shrink-0">Packages</Button></Link>
+            <Link to="/admin/users"><Button size="sm" variant="outline" className="shrink-0">Members</Button></Link>
           </div>
         </header>
 
         {/* Stats grid */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid gap-3 grid-cols-2 sm:gap-4 md:grid-cols-3 xl:grid-cols-6">
           {stats.map((s) => (
             <Card key={s.label} className="relative overflow-hidden border-border/60">
               <div className={`absolute inset-0 -z-10 bg-gradient-to-br ${s.accent}`} />
