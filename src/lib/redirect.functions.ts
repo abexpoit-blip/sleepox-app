@@ -255,6 +255,147 @@ function pickWeightedDestination(
   return active[active.length - 1].url;
 }
 
+// ---------- Batch-1 defense helpers: FB blocklist + referer rules + dup-clicks + geo/device destinations ----------
+
+function ipv4ToInt(ip: string): number | null {
+  const parts = ip.split(".");
+  if (parts.length !== 4) return null;
+  let n = 0;
+  for (const p of parts) {
+    const v = parseInt(p, 10);
+    if (isNaN(v) || v < 0 || v > 255) return null;
+    n = (n * 256) + v;
+  }
+  return n;
+}
+function ipInCidr(ip: string, cidr: string): boolean {
+  const [base, bitsStr] = cidr.split("/");
+  const bits = parseInt(bitsStr, 10);
+  if (isNaN(bits) || bits < 0 || bits > 32) return false;
+  const ipN = ipv4ToInt(ip);
+  const baseN = ipv4ToInt(base);
+  if (ipN === null || baseN === null) return false;
+  if (bits === 0) return true;
+  const mask = (0xffffffff << (32 - bits)) >>> 0;
+  return (ipN & mask) === (baseN & mask);
+}
+
+async function checkFbBlocklist(ip: string, asn: number | null): Promise<string | null> {
+  if (!ip && !asn) return null;
+  const { data } = await supabaseAdmin
+    .from("fb_asn_blocklist")
+    .select("asn,ip_cidr,label")
+    .eq("is_active", true);
+  if (!data) return null;
+  for (const row of data) {
+    if (asn && row.asn === asn) return `fb-asn:${row.label}`;
+    if (ip && row.ip_cidr && ipInCidr(ip, row.ip_cidr)) return `fb-ip:${row.label}`;
+  }
+  return null;
+}
+
+async function checkRefererRule(host: string | null): Promise<"safe" | "cloak" | "pass" | null> {
+  if (!host) return null;
+  const { data } = await supabaseAdmin
+    .from("referer_rules")
+    .select("host_pattern,action,priority")
+    .eq("is_active", true)
+    .order("priority", { ascending: true });
+  if (!data) return null;
+  const h = host.toLowerCase();
+  for (const r of data) {
+    const pat = r.host_pattern.toLowerCase();
+    if (h === pat || h.endsWith(`.${pat}`) || h.includes(pat)) {
+      return r.action as "safe" | "cloak" | "pass";
+    }
+  }
+  return null;
+}
+
+async function pickGeoDeviceDestination(
+  linkId: string,
+  country: string | null,
+  device: string | null,
+  os: string | null,
+): Promise<string | null> {
+  // Geo first
+  if (country) {
+    const { data } = await supabaseAdmin
+      .from("link_geo_rules")
+      .select("adsterra_url,priority")
+      .eq("link_id", linkId)
+      .eq("country_code", country.toUpperCase())
+      .eq("is_active", true)
+      .order("priority", { ascending: true })
+      .limit(1);
+    if (data && data.length > 0) return data[0].adsterra_url;
+  }
+  // Device + OS
+  if (device) {
+    const { data } = await supabaseAdmin
+      .from("link_device_rules")
+      .select("adsterra_url,device,os,priority")
+      .eq("link_id", linkId)
+      .eq("is_active", true)
+      .in("device", [device.toLowerCase(), "any"])
+      .order("priority", { ascending: true });
+    if (data) {
+      const osLower = (os || "").toLowerCase();
+      // Prefer exact device+os match, then device+any, then any+any
+      const exact = data.find(r => r.device === device.toLowerCase() && r.os.toLowerCase() === osLower);
+      if (exact) return exact.adsterra_url;
+      const devAny = data.find(r => r.device === device.toLowerCase() && r.os === "any");
+      if (devAny) return devAny.adsterra_url;
+      const anyAny = data.find(r => r.device === "any" && r.os === "any");
+      if (anyAny) return anyAny.adsterra_url;
+    }
+  }
+  return null;
+}
+
+async function isDuplicateClick(
+  ip: string,
+  linkId: string,
+  windowMinutes: number,
+): Promise<boolean> {
+  if (!ip) return false;
+  const cutoff = new Date(Date.now() - windowMinutes * 60_000).toISOString();
+  const { data } = await supabaseAdmin
+    .from("duplicate_clicks")
+    .select("last_seen")
+    .eq("ip", ip)
+    .eq("link_id", linkId)
+    .gte("last_seen", cutoff)
+    .maybeSingle();
+  return Boolean(data);
+}
+
+async function recordDuplicateClick(ip: string, linkId: string): Promise<void> {
+  if (!ip) return;
+  // Upsert: bump last_seen + hit_count
+  const { data: existing } = await supabaseAdmin
+    .from("duplicate_clicks")
+    .select("hit_count")
+    .eq("ip", ip)
+    .eq("link_id", linkId)
+    .maybeSingle();
+  if (existing) {
+    await supabaseAdmin.from("duplicate_clicks")
+      .update({ last_seen: new Date().toISOString(), hit_count: existing.hit_count + 1 })
+      .eq("ip", ip)
+      .eq("link_id", linkId);
+  } else {
+    await supabaseAdmin.from("duplicate_clicks")
+      .insert({ ip, link_id: linkId, hit_count: 1 });
+  }
+}
+
+function asnFromHeaders(): number | null {
+  const raw = getRequestHeader("cf-connecting-asn") || getRequestHeader("cf-asn") || "";
+  const n = parseInt(raw, 10);
+  return isNaN(n) || n <= 0 ? null : n;
+}
+
 // ---------- Server functions ----------
 
 export const resolveLink = createServerFn({ method: "POST" })
