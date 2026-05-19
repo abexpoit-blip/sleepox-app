@@ -145,6 +145,7 @@ function PreLanderInner({ code, variant, silent }: { code: string; variant: Vari
   }, []);
 
   const runVerify = async () => {
+    if (silent) return; // silent bot: never call verify, never reveal destination
     if (triggered.current) return;
     triggered.current = true;
     setStatus("verifying");
@@ -163,6 +164,7 @@ function PreLanderInner({ code, variant, silent }: { code: string; variant: Vari
   };
 
   useEffect(() => {
+    if (silent) return; // silent bot: no auto-trigger either
     const timer = window.setInterval(() => {
       const m = metrics.current;
       const interactions = m.mouse + m.scroll + m.key + m.touch;
@@ -173,7 +175,7 @@ function PreLanderInner({ code, variant, silent }: { code: string; variant: Vari
     }, 500);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [silent]);
 
   useEffect(() => {
     if (status !== "redirecting" || !destRef.current) return;
