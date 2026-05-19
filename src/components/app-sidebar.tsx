@@ -73,8 +73,8 @@ export function AppSidebar({ email, isAdmin = false }: { email?: string; isAdmin
         <Link to="/" className="flex items-center gap-2.5 font-display font-bold">
           <div className="relative">
             <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-primary to-primary-glow blur-md opacity-60" />
-            <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-glow">
-              <Shield className="h-4 w-4 text-primary-foreground" />
+            <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-glow overflow-hidden">
+              <img src="/favicon.png" alt="LinkShield" className="h-5 w-5" />
             </div>
           </div>
           {!collapsed && (
