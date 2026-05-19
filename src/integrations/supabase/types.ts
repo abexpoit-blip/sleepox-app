@@ -205,6 +205,68 @@ export type Database = {
         }
         Relationships: []
       }
+      duplicate_clicks: {
+        Row: {
+          hit_count: number
+          ip: string
+          last_seen: string
+          link_id: string
+        }
+        Insert: {
+          hit_count?: number
+          ip: string
+          last_seen?: string
+          link_id: string
+        }
+        Update: {
+          hit_count?: number
+          ip?: string
+          last_seen?: string
+          link_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "duplicate_clicks_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fb_asn_blocklist: {
+        Row: {
+          added_by: string | null
+          asn: number | null
+          created_at: string
+          id: string
+          ip_cidr: string | null
+          is_active: boolean
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          added_by?: string | null
+          asn?: number | null
+          created_at?: string
+          id?: string
+          ip_cidr?: string | null
+          is_active?: boolean
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string | null
+          asn?: number | null
+          created_at?: string
+          id?: string
+          ip_cidr?: string | null
+          is_active?: boolean
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       link_destinations: {
         Row: {
           created_at: string
@@ -246,6 +308,91 @@ export type Database = {
           },
         ]
       }
+      link_device_rules: {
+        Row: {
+          adsterra_url: string
+          created_at: string
+          device: string
+          id: string
+          is_active: boolean
+          link_id: string
+          os: string
+          priority: number
+          updated_at: string
+        }
+        Insert: {
+          adsterra_url: string
+          created_at?: string
+          device: string
+          id?: string
+          is_active?: boolean
+          link_id: string
+          os?: string
+          priority?: number
+          updated_at?: string
+        }
+        Update: {
+          adsterra_url?: string
+          created_at?: string
+          device?: string
+          id?: string
+          is_active?: boolean
+          link_id?: string
+          os?: string
+          priority?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_device_rules_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      link_geo_rules: {
+        Row: {
+          adsterra_url: string
+          country_code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          link_id: string
+          priority: number
+          updated_at: string
+        }
+        Insert: {
+          adsterra_url: string
+          country_code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          link_id: string
+          priority?: number
+          updated_at?: string
+        }
+        Update: {
+          adsterra_url?: string
+          country_code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          link_id?: string
+          priority?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_geo_rules_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       link_variant_overrides: {
         Row: {
           created_at: string
@@ -280,6 +427,8 @@ export type Database = {
           clicks_count: number
           created_at: string
           destination_url: string
+          duplicate_protection: boolean
+          duplicate_window_minutes: number
           expires_at: string | null
           id: string
           short_code: string
@@ -295,6 +444,8 @@ export type Database = {
           clicks_count?: number
           created_at?: string
           destination_url: string
+          duplicate_protection?: boolean
+          duplicate_window_minutes?: number
           expires_at?: string | null
           id?: string
           short_code: string
@@ -310,6 +461,8 @@ export type Database = {
           clicks_count?: number
           created_at?: string
           destination_url?: string
+          duplicate_protection?: boolean
+          duplicate_window_minutes?: number
           expires_at?: string | null
           id?: string
           short_code?: string
@@ -437,6 +590,39 @@ export type Database = {
           link_quota?: number
           links_used?: number
           plan_slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      referer_rules: {
+        Row: {
+          action: string
+          created_at: string
+          host_pattern: string
+          id: string
+          is_active: boolean
+          note: string | null
+          priority: number
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          host_pattern: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          priority?: number
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          host_pattern?: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          priority?: number
           updated_at?: string
         }
         Relationships: []
