@@ -38,6 +38,17 @@ import {
 } from "@/components/ui/select";
 
 export const Route = createFileRoute("/funnel")({
+  head: () => ({
+    meta: [
+      { title: "Cross-Link Funnel — LinkShield" },
+      { name: "description", content: "Compare impressions, real clicks, and conversions across your short links." },
+      { property: "og:title", content: "Cross-Link Funnel — LinkShield" },
+      { property: "og:description", content: "Compare impressions, real clicks, and conversions across your short links." },
+      { property: "og:url", content: "https://sleepox.com/funnel" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "https://sleepox.com/funnel" }],
+  }),
   beforeLoad: async ({ location }) => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) throw redirect({ to: "/login", search: { redirect: location.href } });
