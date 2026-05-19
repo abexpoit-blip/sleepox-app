@@ -224,3 +224,43 @@
     filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.8)) drop-shadow(0 0 20px rgba(59, 130, 246, 0.6));
   }
 }
+
+/* Logo breathing halo */
+@keyframes logo-pulse {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.15);
+  }
+}
+
+@layer utilities {
+  .logo-halo {
+    position: relative;
+    isolation: isolate;
+  }
+  .logo-halo::before {
+    content: "";
+    position: absolute;
+    inset: -35%;
+    z-index: -1;
+    border-radius: 9999px;
+    background: radial-gradient(
+      circle,
+      oklch(0.7 0.22 295 / 55%) 0%,
+      oklch(0.65 0.2 260 / 35%) 35%,
+      transparent 70%
+    );
+    filter: blur(14px);
+    animation: logo-pulse 3.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .logo-halo-sm::before {
+    inset: -25%;
+    filter: blur(8px);
+  }
+}
+

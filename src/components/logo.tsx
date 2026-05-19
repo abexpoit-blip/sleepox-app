@@ -1,10 +1,19 @@
 type LogoProps = {
   className?: string;
   title?: string;
+  /** Wrap the logo in an animated radial halo for premium glow. */
+  glow?: boolean;
+  /** Use smaller halo radius — good for sidebar / inline contexts. */
+  glowSize?: "sm" | "md";
 };
 
-export function Logo({ className, title = "LinkShield" }: LogoProps) {
-  return (
+export function Logo({
+  className,
+  title = "LinkShield",
+  glow = false,
+  glowSize = "md",
+}: LogoProps) {
+  const svg = (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 64 64"
@@ -36,5 +45,15 @@ export function Logo({ className, title = "LinkShield" }: LogoProps) {
         <path d="M26 38 L38 26" />
       </g>
     </svg>
+  );
+
+  if (!glow) return svg;
+
+  return (
+    <span
+      className={`logo-halo ${glowSize === "sm" ? "logo-halo-sm" : ""} inline-flex items-center justify-center`}
+    >
+      {svg}
+    </span>
   );
 }
