@@ -88,12 +88,12 @@ function AdminDashboard() {
           {stats.map((s) => (
             <Card key={s.label} className="relative overflow-hidden border-border/60">
               <div className={`absolute inset-0 -z-10 bg-gradient-to-br ${s.accent}`} />
-              <CardContent className="p-5">
+              <CardContent className="p-3 sm:p-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{s.label}</p>
-                  <s.icon className={`h-4 w-4 ${s.iconColor}`} />
+                  <p className="truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">{s.label}</p>
+                  <s.icon className={`h-4 w-4 shrink-0 ${s.iconColor}`} />
                 </div>
-                <p className="mt-3 font-display text-3xl font-bold tabular-nums">
+                <p className="mt-2 font-display text-xl font-bold tabular-nums sm:mt-3 sm:text-3xl">
                   {isLoading ? "—" : s.value.toLocaleString()}
                 </p>
               </CardContent>
@@ -102,7 +102,7 @@ function AdminDashboard() {
         </div>
 
         {/* Advanced KPI strip */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 sm:gap-4 lg:grid-cols-4">
           <KpiCard label="Last 24h clicks" value={adv?.last24h.total ?? 0} sub={`${adv?.last24h.human ?? 0} human · ${adv?.last24h.bot ?? 0} bot`} icon={Flame} tone="text-orange-400" loading={advLoading} />
           <KpiCard label="Bot ratio (7d)" value={`${adv?.last7d.botPct ?? 0}%`} sub={`${(adv?.last7d.bot ?? 0).toLocaleString()} of ${(adv?.last7d.total ?? 0).toLocaleString()}`} icon={Bot} tone="text-rose-400" loading={advLoading} />
           <KpiCard label="Revenue (30d)" value={`$${(adv?.revenue.last30d ?? 0).toFixed(2)}`} sub={`${Object.keys(adv?.revenue.byPackage ?? {}).length} packages`} icon={DollarSign} tone="text-emerald-400" loading={advLoading} />
