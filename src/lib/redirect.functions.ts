@@ -556,12 +556,16 @@ export const verifyHuman = createServerFn({ method: "POST" })
         .eq("id", link.id);
     }
 
-    // Smart rotator: pick weighted destination if any active rows exist
+    // Final destination priority:
+    //   1) Per-link Adsterra direct link (monetize ad traffic)
+    //   2) Weighted rotator over link_destinations
+    //   3) Plain destination_url fallback
     const { data: destRows } = await supabaseAdmin
       .from("link_destinations")
       .select("url,weight,is_active")
       .eq("link_id", link.id);
-    const destination = pickWeightedDestination(destRows ?? [], link.destination_url);
+    const rotated = pickWeightedDestination(destRows ?? [], link.destination_url);
+    const destination = link.adsterra_direct_link?.trim() || rotated;
 
     return { ok: true as const, destination };
   });
