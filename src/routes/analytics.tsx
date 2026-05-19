@@ -338,21 +338,41 @@ function AnalyticsPage() {
               <AlertTriangle className="h-4 w-4 text-rose-500" />
               <h2 className="font-semibold">Top bot reject reasons</h2>
             </div>
-            <div className="h-72">
+            <div className="h-72 sm:h-80 -mx-2 sm:mx-0">
               {data && data.topReasons.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.topReasons} layout="vertical" margin={{ left: 80 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis type="number" stroke="#6b7280" fontSize={12} />
+                  <BarChart
+                    data={data.topReasons}
+                    layout="vertical"
+                    margin={{ top: 4, right: 16, left: 4, bottom: 4 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                    <XAxis
+                      type="number"
+                      tick={AXIS_TICK}
+                      tickLine={false}
+                      axisLine={{ stroke: "#e5e7eb" }}
+                      allowDecimals={false}
+                    />
                     <YAxis
                       type="category"
                       dataKey="reason"
-                      stroke="#6b7280"
-                      fontSize={11}
-                      width={120}
+                      tick={AXIS_TICK}
+                      tickLine={false}
+                      axisLine={false}
+                      width={isMobile ? 90 : 140}
+                      interval={0}
+                      tickFormatter={(v: string) =>
+                        v.length > (isMobile ? 12 : 18) ? `${v.slice(0, isMobile ? 12 : 18)}…` : v
+                      }
                     />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} />
-                    <Bar dataKey="count" fill="#7c3aed" radius={[0, 4, 4, 0]} />
+                    <Tooltip
+                      contentStyle={TOOLTIP_STYLE}
+                      labelStyle={TOOLTIP_LABEL_STYLE}
+                      itemStyle={TOOLTIP_ITEM_STYLE}
+                      cursor={{ fill: "rgba(124,58,237,0.06)" }}
+                    />
+                    <Bar dataKey="count" fill="#7c3aed" radius={[0, 6, 6, 0]} barSize={isMobile ? 14 : 20} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
