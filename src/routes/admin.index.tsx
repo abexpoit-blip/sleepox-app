@@ -62,38 +62,38 @@ function AdminDashboard() {
       {/* ambient glow */}
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 bg-gradient-to-b from-primary/10 via-transparent to-transparent" />
 
-      <div className="mx-auto max-w-7xl space-y-8 p-6 md:p-8">
+      <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 md:space-y-8 md:p-8">
         {/* Hero */}
         <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
+          <div className="min-w-0">
             <Badge variant="outline" className="mb-2 gap-1.5 border-primary/30 bg-primary/5 text-primary">
               <Activity className="h-3 w-3" /> Admin Console
             </Badge>
-            <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">
+            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
               Welcome back, operator.
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
               Live overview of users, traffic, revenue requests and infrastructure.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link to="/admin/payments"><Button variant="default" className="gap-2">Review requests <ArrowRight className="h-4 w-4" /></Button></Link>
-            <Link to="/admin/packages"><Button variant="outline">Packages</Button></Link>
-            <Link to="/admin/users"><Button variant="outline">Members</Button></Link>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+            <Link to="/admin/payments"><Button size="sm" variant="default" className="shrink-0 gap-2">Review requests <ArrowRight className="h-4 w-4" /></Button></Link>
+            <Link to="/admin/packages"><Button size="sm" variant="outline" className="shrink-0">Packages</Button></Link>
+            <Link to="/admin/users"><Button size="sm" variant="outline" className="shrink-0">Members</Button></Link>
           </div>
         </header>
 
         {/* Stats grid */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid gap-3 grid-cols-2 sm:gap-4 md:grid-cols-3 xl:grid-cols-6">
           {stats.map((s) => (
             <Card key={s.label} className="relative overflow-hidden border-border/60">
               <div className={`absolute inset-0 -z-10 bg-gradient-to-br ${s.accent}`} />
-              <CardContent className="p-5">
+              <CardContent className="p-3 sm:p-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{s.label}</p>
-                  <s.icon className={`h-4 w-4 ${s.iconColor}`} />
+                  <p className="truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">{s.label}</p>
+                  <s.icon className={`h-4 w-4 shrink-0 ${s.iconColor}`} />
                 </div>
-                <p className="mt-3 font-display text-3xl font-bold tabular-nums">
+                <p className="mt-2 font-display text-xl font-bold tabular-nums sm:mt-3 sm:text-3xl">
                   {isLoading ? "—" : s.value.toLocaleString()}
                 </p>
               </CardContent>
@@ -102,7 +102,7 @@ function AdminDashboard() {
         </div>
 
         {/* Advanced KPI strip */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 sm:gap-4 lg:grid-cols-4">
           <KpiCard label="Last 24h clicks" value={adv?.last24h.total ?? 0} sub={`${adv?.last24h.human ?? 0} human · ${adv?.last24h.bot ?? 0} bot`} icon={Flame} tone="text-orange-400" loading={advLoading} />
           <KpiCard label="Bot ratio (7d)" value={`${adv?.last7d.botPct ?? 0}%`} sub={`${(adv?.last7d.bot ?? 0).toLocaleString()} of ${(adv?.last7d.total ?? 0).toLocaleString()}`} icon={Bot} tone="text-rose-400" loading={advLoading} />
           <KpiCard label="Revenue (30d)" value={`$${(adv?.revenue.last30d ?? 0).toFixed(2)}`} sub={`${Object.keys(adv?.revenue.byPackage ?? {}).length} packages`} icon={DollarSign} tone="text-emerald-400" loading={advLoading} />
@@ -259,7 +259,7 @@ function AdminDashboard() {
             {(data?.recentLinks?.length ?? 0) === 0 ? (
               <p className="text-sm text-muted-foreground">No links yet.</p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {data!.recentLinks.map((l: any) => (
                   <div key={l.id} className="rounded-xl border border-border/60 bg-card-gradient p-4 transition hover:border-primary/40">
                     <p className="truncate text-sm font-semibold">{l.title || l.short_code}</p>
@@ -284,13 +284,13 @@ function AdminDashboard() {
 function KpiCard({ label, value, sub, icon: Icon, tone, loading }: { label: string; value: string | number; sub?: string; icon: any; tone: string; loading?: boolean }) {
   return (
     <Card className="border-border/60">
-      <CardContent className="p-5">
+      <CardContent className="p-3 sm:p-5">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-          <Icon className={`h-4 w-4 ${tone}`} />
+          <p className="truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">{label}</p>
+          <Icon className={`h-4 w-4 shrink-0 ${tone}`} />
         </div>
-        <p className="mt-2 font-display text-2xl font-bold tabular-nums">{loading ? "—" : value}</p>
-        {sub && <p className="mt-1 truncate text-xs text-muted-foreground">{sub}</p>}
+        <p className="mt-2 font-display text-lg font-bold tabular-nums sm:text-2xl">{loading ? "—" : value}</p>
+        {sub && <p className="mt-1 truncate text-[10px] text-muted-foreground sm:text-xs">{sub}</p>}
       </CardContent>
     </Card>
   );
