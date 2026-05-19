@@ -228,6 +228,6 @@ export const getAdminAdvancedStats = createServerFn({ method: "GET" })
         bannedUsers: bannedUsersRes.count ?? 0,
         activeLinks: activeLinksRes.count ?? 0,
       },
-      truncated: rows.length >= 10000,
+      truncated: rows.length >= 5000,
     };
   });
