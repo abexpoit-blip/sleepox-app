@@ -3,6 +3,24 @@ import { Shield, Zap, BarChart3, Bot, Globe, Lock, ArrowRight, Check } from "luc
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "LinkShield — Smart URL Shortener for Ad Boosting" },
+      {
+        name: "description",
+        content:
+          "Bot-filtered short links built for Facebook & Instagram ad campaigns. Cut wasted spend, boost real CTR, protect your ad accounts.",
+      },
+      { property: "og:title", content: "LinkShield — Smart URL Shortener for Ad Boosting" },
+      {
+        property: "og:description",
+        content:
+          "Bot-filtered short links built for Facebook & Instagram ad campaigns. Cut wasted spend, boost real CTR, protect your ad accounts.",
+      },
+      { property: "og:url", content: "https://sleepox.com/" },
+    ],
+    links: [{ rel: "canonical", href: "https://sleepox.com/" }],
+  }),
   component: LandingPage,
 });
 

@@ -38,6 +38,17 @@ import {
 } from "@/components/ui/select";
 
 export const Route = createFileRoute("/funnel")({
+  head: () => ({
+    meta: [
+      { title: "Cross-Link Funnel — LinkShield" },
+      { name: "description", content: "Compare impressions, real clicks, and conversions across your short links." },
+      { property: "og:title", content: "Cross-Link Funnel — LinkShield" },
+      { property: "og:description", content: "Compare impressions, real clicks, and conversions across your short links." },
+      { property: "og:url", content: "https://sleepox.com/funnel" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "https://sleepox.com/funnel" }],
+  }),
   beforeLoad: async ({ location }) => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) throw redirect({ to: "/login", search: { redirect: location.href } });
@@ -134,8 +145,8 @@ function FunnelPage() {
       <header className="border-b border-border bg-card/40 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Shield className="h-6 w-6 text-primary" />
-            <span className="font-bold tracking-tight text-lg">Cross-Link Funnel</span>
+            <Shield className="h-6 w-6 text-primary" aria-hidden="true" />
+            <h1 className="font-bold tracking-tight text-lg">Cross-Link Funnel</h1>
           </div>
           <div className="flex items-center gap-2">
             <Select
@@ -213,8 +224,8 @@ function FunnelPage() {
               {live ? "Live" : "Offline"}
               {pulse > 0 && <span className="text-muted-foreground tabular-nums">· {pulse}</span>}
             </div>
-            <Button variant="outline" size="icon" onClick={() => void load()} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <Button variant="outline" size="icon" onClick={() => void load()} disabled={loading} aria-label="Refresh funnel data">
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
             </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/dashboard" })}>
               <ArrowLeft className="h-4 w-4 mr-1" /> Dashboard

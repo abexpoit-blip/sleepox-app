@@ -49,6 +49,17 @@ const RANGE_TO_DAYS = { day: 1, week: 7, month: 30 } as const;
 type AnalyticsSearch = { days: number; linkId: string };
 
 export const Route = createFileRoute("/analytics")({
+  head: () => ({
+    meta: [
+      { title: "Analytics — LinkShield" },
+      { name: "description", content: "Real-time analytics: real users vs bots, devices, countries, and conversions for your short links." },
+      { property: "og:title", content: "Analytics — LinkShield" },
+      { property: "og:description", content: "Real-time analytics: real users vs bots, devices, countries, and conversions for your short links." },
+      { property: "og:url", content: "https://sleepox.com/analytics" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "https://sleepox.com/analytics" }],
+  }),
   validateSearch: (s: Record<string, unknown>): AnalyticsSearch => {
     let days = 7;
     const d = s.days;
@@ -120,8 +131,8 @@ function AnalyticsPage() {
       <header className="border-b border-border bg-card/40 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Shield className="h-6 w-6 text-primary" />
-            <span className="font-bold tracking-tight text-lg">LinkShield Analytics</span>
+            <Shield className="h-6 w-6 text-primary" aria-hidden="true" />
+            <h1 className="font-bold tracking-tight text-lg">LinkShield Analytics</h1>
           </div>
           <div className="flex items-center gap-2">
             <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
@@ -149,8 +160,8 @@ function AnalyticsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon" onClick={load} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <Button variant="outline" size="icon" onClick={load} disabled={loading} aria-label="Refresh analytics">
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
             </Button>
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/funnel" })}>
               Cross-link funnel

@@ -6,8 +6,12 @@ export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
       { title: "Pricing — LinkShield" },
-      { name: "description", content: "Simple, transparent pricing for agencies and media buyers." },
+      { name: "description", content: "Simple, transparent pricing for agencies and media buyers running Meta ads." },
+      { property: "og:title", content: "Pricing — LinkShield" },
+      { property: "og:description", content: "Simple, transparent pricing for agencies and media buyers running Meta ads." },
+      { property: "og:url", content: "https://sleepox.com/pricing" },
     ],
+    links: [{ rel: "canonical", href: "https://sleepox.com/pricing" }],
   }),
   component: PricingPage,
 });
@@ -75,7 +79,7 @@ function PricingPage() {
                   Most popular
                 </div>
               )}
-              <h3 className="font-display text-2xl font-bold">{p.name}</h3>
+              <h2 className="font-display text-2xl font-bold">{p.name}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{p.desc}</p>
               <div className="mt-6 flex items-baseline gap-1">
                 <span className="text-5xl font-bold">${p.price}</span>
