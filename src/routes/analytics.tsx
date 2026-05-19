@@ -83,15 +83,24 @@ export const Route = createFileRoute("/analytics")({
 });
 
 const PIE_COLORS = [
-  "#7c3aed",
-  "#22c55e",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#06b6d4",
-  "#ec4899",
-  "#84cc16",
+  "#7c3aed", // violet
+  "#10b981", // emerald
+  "#f59e0b", // amber
+  "#ef4444", // red
+  "#06b6d4", // cyan
+  "#ec4899", // pink
+  "#8b5cf6", // purple
+  "#84cc16", // lime
 ];
+
+const TOOLTIP_STYLE = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "12px",
+  boxShadow: "0 10px 30px -10px rgba(124, 58, 237, 0.2)",
+  fontSize: "12px",
+  padding: "8px 12px",
+} as const;
 
 type Analytics = Awaited<ReturnType<typeof getAnalytics>>;
 
