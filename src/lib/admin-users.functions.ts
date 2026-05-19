@@ -138,7 +138,7 @@ export const updateMemberPlan = createServerFn({ method: "POST" })
       action: "users.plan.update",
       metadata: { targetUserId: data.userId, planSlug: data.planSlug, linkQuota: data.linkQuota },
     });
-    const patch: Record<string, unknown> = { plan_slug: data.planSlug };
+    const patch: { plan_slug: string; link_quota?: number } = { plan_slug: data.planSlug };
     if (typeof data.linkQuota === "number") patch.link_quota = data.linkQuota;
     const { error } = await supabaseAdmin.from("profiles").update(patch).eq("id", data.userId);
     if (error) throw new Error(error.message);
