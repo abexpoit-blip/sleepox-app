@@ -229,26 +229,10 @@ function LinkSettingsPage() {
           <p className="mt-1 truncate text-sm text-muted-foreground">{link?.destination_url}</p>
         </div>
 
-        {/* Adsterra Direct Link */}
-        <section className="rounded-2xl border border-border bg-card-gradient p-6 space-y-4">
-          <div>
-            <h2 className="font-display text-lg font-semibold">Adsterra Direct Link</h2>
-            <p className="text-sm text-muted-foreground">
-              যদি সেট করা থাকে, real visitors (bot check পার করার পর) এই Adsterra URL-এ যাবে। খালি রাখলে উপরের destination URL ব্যবহার হবে।
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Input
-              type="url"
-              placeholder="https://otieu.com/4/xxxxxxx"
-              value={adsterraInput}
-              onChange={(e) => setAdsterraInput(e.target.value)}
-            />
-            <Button onClick={saveAdsterra} disabled={savingAdsterra}>
-              {savingAdsterra ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        </section>
+        {/* Adsterra Direct Link section removed — destination URL above IS the Adsterra link.
+            Bots automatically see the prelander; real users go straight to the destination. */}
+
+
 
 
         {/* Targeting */}
