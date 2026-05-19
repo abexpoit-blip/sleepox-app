@@ -89,13 +89,13 @@ export const getAdminAdvancedStats = createServerFn({ method: "GET" })
     const since30dIso = since30d.toISOString();
 
     // Single 7d scan covers daily series, 24h KPIs and all top lists.
-    // Tighter window + smaller cap than the old 30d/20k pull = faster & more accurate.
+    // 5000 row cap keeps the query fast even on heavy traffic; if exceeded we mark `truncated`.
     const clicks7dPromise = supabaseAdmin
       .from("clicks")
       .select("is_bot,country,referer_host,created_at,link_id,bot_reason")
       .gte("created_at", since7dIso)
       .order("created_at", { ascending: false })
-      .limit(10000);
+      .limit(5000);
 
     // Run all independent reads in parallel.
     const [
