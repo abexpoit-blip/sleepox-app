@@ -302,10 +302,10 @@ export const resolveLink = createServerFn({ method: "POST" })
       targetingCheck.blocked ? `target:${targetingCheck.reason}` : "",
     ].filter(Boolean).join(",");
 
-    // Targeting block always shows safe page (never reveals destination)
+    // Targeting block: also serve silent prelander instead of giving away that we filtered
     const effectiveAction = targetingCheck.blocked ? "safe_page" : cfg.suspicious_action;
 
-    // Hard block path
+    // Hard block path — only when admin explicitly chose "block"
     if (suspicious && effectiveAction === "block") {
       const uaInfoB = parseUA(a.ua);
       const attrB = attributionFromRequestUrl();
@@ -331,31 +331,12 @@ export const resolveLink = createServerFn({ method: "POST" })
       };
     }
 
-    // Safe page path — show innocuous content, never reveal destination
-    if (suspicious && effectiveAction === "safe_page") {
-      const uaInfoS = parseUA(a.ua);
-      const attrS = attributionFromRequestUrl();
-      await supabaseAdmin.from("clicks").insert({
-        link_id: link.id,
-        ip_address: ip || null,
-        country,
-        user_agent: a.ua || null,
-        referer: referer || null,
-        is_bot: true,
-        bot_reason: `safe:${suspicionReasons}`,
-        device: uaInfoS.device,
-        os: uaInfoS.os,
-        browser: uaInfoS.browser,
-        variant: null,
-        ...attrS,
-      });
-      return {
-        found: true as const,
-        blocked: false as const,
-        safe: true as const,
-        message: cfg.safe_page_message,
-      };
-    }
+    // NOTE: "safe page" path no longer renders a separate "Article unavailable"
+    // screen — that was a giveaway cloaking signal to Facebook's ad reviewer
+    // bot. Instead we fall through and render a real prelander variant, but
+    // set silentBot:true so the client never auto-triggers verifyHuman and
+    // never reveals the real destination. To the reviewer this looks like a
+    // legitimate article page that simply isn't auto-redirecting.
 
     // Load active variants from DB
     const { data: variantRows } = await supabaseAdmin
