@@ -158,13 +158,7 @@ export function AppSidebar({ email, isAdmin = false }: { email?: string; isAdmin
         {/* ExpoIT Dev Credit */}
         {!collapsed && (
           <div className="mx-2 mt-2 flex justify-center">
-            <span
-              className="rounded-full bg-gradient-to-r from-violet-600 via-purple-500 to-blue-500 bg-clip-text text-[10px] font-bold tracking-wider text-transparent"
-              style={{
-                filter: "drop-shadow(0 0 6px rgba(139,92,246,0.6)) drop-shadow(0 0 12px rgba(59,130,246,0.4))",
-                animation: "expo-glow 2.5s ease-in-out infinite alternate",
-              }}
-            >
+            <span className="inline-block rounded-full bg-gradient-to-r from-violet-600 via-purple-500 to-blue-500 px-2.5 py-0.5 text-[9px] font-bold tracking-wider text-white shadow-glow">
               Developed by ExpoIT
             </span>
           </div>
