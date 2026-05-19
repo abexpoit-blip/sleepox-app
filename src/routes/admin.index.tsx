@@ -101,6 +101,93 @@ function AdminDashboard() {
           ))}
         </div>
 
+        {/* Advanced KPI strip */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard label="Last 24h clicks" value={adv?.last24h.total ?? 0} sub={`${adv?.last24h.human ?? 0} human · ${adv?.last24h.bot ?? 0} bot`} icon={Flame} tone="text-orange-400" loading={advLoading} />
+          <KpiCard label="Bot ratio (7d)" value={`${adv?.last7d.botPct ?? 0}%`} sub={`${(adv?.last7d.bot ?? 0).toLocaleString()} of ${(adv?.last7d.total ?? 0).toLocaleString()}`} icon={Bot} tone="text-rose-400" loading={advLoading} />
+          <KpiCard label="Revenue (30d)" value={`$${(adv?.revenue.last30d ?? 0).toFixed(2)}`} sub={`${Object.keys(adv?.revenue.byPackage ?? {}).length} packages`} icon={DollarSign} tone="text-emerald-400" loading={advLoading} />
+          <KpiCard label="New users (7d / 30d)" value={`${adv?.growth.newUsers7d ?? 0} / ${adv?.growth.newUsers30d ?? 0}`} sub={`${adv?.growth.activeLinks ?? 0} active · ${adv?.growth.bannedUsers ?? 0} banned`} icon={UserPlus} tone="text-blue-400" loading={advLoading} />
+        </div>
+
+        {/* Traffic chart + bot reasons */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base"><Activity className="h-4 w-4 text-primary" /> Traffic — last 7 days</CardTitle>
+              <CardDescription>Human vs bot clicks per day</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TrafficChart series={adv?.dailySeries ?? []} />
+              <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Human</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-400" /> Bot</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4 text-primary" /> Bot detection (7d)</CardTitle>
+              <CardDescription>Top trigger reasons</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(adv?.topBotReasons?.length ?? 0) === 0 ? (
+                <p className="text-sm text-muted-foreground">No bot hits yet.</p>
+              ) : adv!.topBotReasons.map((b) => (
+                <div key={b.reason} className="flex items-center justify-between text-sm">
+                  <span className="font-mono text-xs">{b.reason}</span>
+                  <Badge variant="outline" className="tabular-nums">{b.count}</Badge>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Top countries / referrers / links */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base"><Globe className="h-4 w-4 text-primary" /> Top countries (7d)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(adv?.topCountries?.length ?? 0) === 0 ? (
+                <p className="text-sm text-muted-foreground">No data yet.</p>
+              ) : <RankBars items={adv!.topCountries.map((c) => ({ label: c.country, value: c.count }))} />}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base"><ExternalLink className="h-4 w-4 text-primary" /> Top referrers (7d)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(adv?.topReferers?.length ?? 0) === 0 ? (
+                <p className="text-sm text-muted-foreground">No data yet.</p>
+              ) : <RankBars items={adv!.topReferers.map((r) => ({ label: r.host, value: r.count }))} />}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base"><UserCheck className="h-4 w-4 text-primary" /> Top links (7d)</CardTitle>
+              <CardDescription>By total clicks</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(adv?.topLinks?.length ?? 0) === 0 ? (
+                <p className="text-sm text-muted-foreground">No data yet.</p>
+              ) : adv!.topLinks.map((l) => (
+                <div key={l.id} className="flex items-center justify-between gap-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{l.title || l.short_code}</p>
+                    <p className="truncate font-mono text-xs text-muted-foreground">/{l.short_code} · {l.human}h / {l.bot}b</p>
+                  </div>
+                  <Badge variant="outline" className="tabular-nums">{l.total}</Badge>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+
+
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Plan distribution */}
           <Card className="lg:col-span-1">
