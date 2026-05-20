@@ -123,6 +123,7 @@ function Dashboard() {
   const [countryDrill, setCountryDrill] = useState<Awaited<ReturnType<typeof getCountryDrilldown>> | null>(null);
   const [countryDrillCode, setCountryDrillCode] = useState<string | null>(null);
   const [countryDrillLoading, setCountryDrillLoading] = useState(false);
+  const [drillFilters, setDrillFilters] = useState<{ device: string | null; browser: string | null; os: string | null }>({ device: null, browser: null, os: null });
   const fetchDiag = useServerFn(getAdRejectDiagnostics);
   const [diag, setDiag] = useState<Awaited<ReturnType<typeof getAdRejectDiagnostics>> | null>(null);
   const [diagLoading, setDiagLoading] = useState(true);
