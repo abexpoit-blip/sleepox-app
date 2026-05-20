@@ -19,7 +19,7 @@ export interface PlatformLandingProps {
 }
 
 export function PlatformLanding(props: PlatformLandingProps) {
-  const { platform, tagline, heroTitle, heroSub, painPoints, benefits, faq, accent } =
+  const { platform, slug, tagline, heroTitle, heroSub, painPoints, benefits, faq, accent } =
     props;
   const breadcrumbItems = [{ label: `${platform} Ads`, to: `/${slug}` }];
 
