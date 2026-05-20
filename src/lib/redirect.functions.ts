@@ -116,6 +116,38 @@ async function repeatFingerprintHits(
   }
 }
 
+function phase3Signals(input: {
+  source: "direct" | "blocked" | "silent" | "verify-silent";
+  request: ReturnType<typeof analyzeRequest>;
+  reasons: string[];
+  rateHits?: number;
+  duplicateClick?: boolean;
+  targetBlocked?: boolean;
+  targetReason?: string;
+  fbHit?: string | null;
+  refAction?: string | null;
+  timeAction?: string | null;
+}) {
+  return {
+    phase: 3,
+    source: input.source,
+    serverScore: input.request.score,
+    hardBot: input.request.hardBot,
+    requestBot: input.request.isBot,
+    acceptLang: Boolean(input.request.acceptLang),
+    secChUa: Boolean(input.request.secChUa),
+    dnt: input.request.dnt || null,
+    rateHits: input.rateHits ?? 0,
+    duplicateClick: Boolean(input.duplicateClick),
+    targetBlocked: Boolean(input.targetBlocked),
+    targetReason: input.targetReason || null,
+    fbHit: input.fbHit || null,
+    refAction: input.refAction || null,
+    timeAction: input.timeAction || null,
+    reasons: input.reasons.filter(Boolean),
+  };
+}
+
 
 function refererHost(ref: string | null | undefined) {
   if (!ref) return null;
