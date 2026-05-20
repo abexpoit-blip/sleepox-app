@@ -514,16 +514,10 @@ export const resolveLink = createServerFn({ method: "POST" })
 
     const uaInfo = parseUA(a.ua);
     const attr = attributionFromRequestUrl();
-    // Batch-1: FB blocklist + referer rule check (treat as silent cloak)
-    const asn = asnFromHeaders();
-    const fbHitRaw = await checkFbBlocklist(ip, asn);
     // IMPORTANT: Facebook's mobile in-app browser routes REAL users through
     // FB's own IP ranges. If the UA looks like a real browser (Chrome/Safari/
     // Firefox) and has no scraper signal, do NOT cloak based on IP alone.
     const fbHit = fbHitRaw && a.hardBot ? fbHitRaw : null;
-    const refHost = refererHost(referer);
-    const refAction = await checkRefererRule(refHost);
-    const timeAction = await checkTimeRule(link.id);
     const refSafe = refAction === "safe" || refAction === "cloak";
     const timeSafe = timeAction === "safe" || timeAction === "cloak";
     const silentBot = a.hardBot || Boolean(fbHit) || refSafe || timeSafe || targetingCheck.blocked;
