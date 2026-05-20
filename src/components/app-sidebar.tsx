@@ -88,7 +88,7 @@ export function AppSidebar({ email, isAdmin = false }: { email?: string; isAdmin
       <SidebarContent className="px-2 py-3">
         <SidebarGroup>
           {!collapsed && (
-            <SidebarGroupLabel className="px-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+            <SidebarGroupLabel className="px-3 text-[10px] uppercase tracking-[0.14em] text-sidebar-foreground/50">
               Workspace
             </SidebarGroupLabel>
           )}
@@ -99,7 +99,7 @@ export function AppSidebar({ email, isAdmin = false }: { email?: string; isAdmin
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.url)}
-                    className="h-9 rounded-lg data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/15 data-[active=true]:to-transparent data-[active=true]:text-foreground data-[active=true]:shadow-[inset_2px_0_0_var(--color-primary)]"
+                    className="h-9 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent/40 hover:text-white data-[active=true]:bg-gradient-to-r data-[active=true]:from-sky-500/25 data-[active=true]:via-sky-400/10 data-[active=true]:to-transparent data-[active=true]:text-white data-[active=true]:shadow-[inset_2px_0_0_oklch(0.72_0.16_235)]"
                   >
                     <Link to={item.url} className="flex items-center gap-2.5">
                       <item.icon className="h-4 w-4 shrink-0" />
@@ -115,7 +115,7 @@ export function AppSidebar({ email, isAdmin = false }: { email?: string; isAdmin
         {isAdmin && (
         <SidebarGroup className="mt-4">
           {!collapsed && (
-            <SidebarGroupLabel className="px-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+            <SidebarGroupLabel className="px-3 text-[10px] uppercase tracking-[0.14em] text-sidebar-foreground/50">
               Admin
             </SidebarGroupLabel>
           )}
@@ -126,7 +126,7 @@ export function AppSidebar({ email, isAdmin = false }: { email?: string; isAdmin
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.url)}
-                    className="h-9 rounded-lg data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/15 data-[active=true]:to-transparent data-[active=true]:text-foreground data-[active=true]:shadow-[inset_2px_0_0_var(--color-primary)]"
+                    className="h-9 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent/40 hover:text-white data-[active=true]:bg-gradient-to-r data-[active=true]:from-sky-500/25 data-[active=true]:via-sky-400/10 data-[active=true]:to-transparent data-[active=true]:text-white data-[active=true]:shadow-[inset_2px_0_0_oklch(0.72_0.16_235)]"
                   >
                     <Link to={item.url} className="flex items-center gap-2.5">
                       <item.icon className="h-4 w-4 shrink-0" />
@@ -141,15 +141,15 @@ export function AppSidebar({ email, isAdmin = false }: { email?: string; isAdmin
         )}
 
         {!collapsed && (
-          <div className="mx-2 mt-6 overflow-hidden rounded-xl border border-sidebar-border/60 bg-gradient-to-br from-primary/10 via-transparent to-primary-glow/10 p-4">
+          <div className="mx-2 mt-6 overflow-hidden rounded-xl border border-sidebar-border/60 bg-gradient-to-br from-sky-500/15 via-sky-400/5 to-transparent p-4">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-xs font-semibold">Free plan</span>
+              <Sparkles className="h-4 w-4 text-sky-300" />
+              <span className="text-xs font-semibold text-white">Free plan</span>
             </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            <p className="mt-2 text-[11px] leading-relaxed text-sidebar-foreground/70">
               Upgrade for unlimited links, custom domains & API.
             </p>
-            <Button size="sm" className="mt-3 h-7 w-full text-xs">
+            <Button size="sm" className="mt-3 h-7 w-full bg-gradient-to-r from-sky-500 to-sky-400 text-white text-xs hover:opacity-90">
               Upgrade
             </Button>
           </div>
