@@ -1119,8 +1119,9 @@ function Dashboard() {
                 ) : (
                   <div className="divide-y divide-border/60">
                     {filtered.map((l) => {
-                      const total = l.clicks_count + l.bot_clicks_count;
-                      const cleanPct = total > 0 ? (l.clicks_count / total) * 100 : 100;
+                      const s = getLinkStats(l.id);
+                      const total = s.humans + s.bots;
+                      const cleanPct = total > 0 ? (s.humans / total) * 100 : 100;
                       return (
                         <div
                           key={l.id}
