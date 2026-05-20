@@ -243,7 +243,7 @@ function analyzeRequest() {
   return {
     ua, isBot: score >= 50, hardBot, score,
     reasons: reasons.join(","),
-    acceptLang, secChUaMobile, dnt,
+    acceptLang, secChUa, secChUaMobile, dnt,
   };
 }
 
@@ -630,6 +630,16 @@ export const resolveLink = createServerFn({ method: "POST" })
         os: uaInfoB.os,
         browser: uaInfoB.browser,
         variant: null,
+        bot_score: Math.min(a.score + (rateLimited ? 60 : 0) + (targetingCheck.blocked ? 100 : 0), 500),
+        signals: phase3Signals({
+          source: "blocked",
+          request: a,
+          reasons: suspicionReasons.split(",").filter(Boolean),
+          rateHits,
+          targetBlocked: targetingCheck.blocked,
+          targetReason: targetingCheck.reason,
+        }),
+        challenge_passed: false,
         ...attrB,
       });
       return {
@@ -684,6 +694,14 @@ export const resolveLink = createServerFn({ method: "POST" })
         os: uaInfo.os,
         browser: uaInfo.browser,
         variant: null,
+        bot_score: Math.min(a.score, 500),
+        signals: phase3Signals({
+          source: "direct",
+          request: a,
+          reasons: defenseReasons.split(",").filter(Boolean),
+          duplicateClick,
+        }),
+        challenge_passed: true,
         ...attr,
       });
 
