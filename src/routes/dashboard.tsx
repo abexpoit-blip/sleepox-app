@@ -646,6 +646,191 @@ function Dashboard() {
                 </div>
               </div>
 
+              {/* Bot Detection Score & Confidence Breakdown */}
+              {(() => {
+                const total = rangeTotals.total;
+                const bots = rangeTotals.bots;
+                const humans = rangeTotals.humans;
+                const blockRate = total > 0 ? (bots / total) * 100 : 0;
+                // Detection confidence score (0-100): weighted by sample size & block ratio.
+                // Low traffic → low confidence even if block rate is high.
+                const sampleConfidence = Math.min(1, total / 200); // 200 clicks ≈ full sample weight
+                const ratioConfidence = total > 0 ? Math.min(1, (bots / total) * 1.5 + 0.4) : 0.4;
+                const score = total === 0 ? 0 : Math.round(sampleConfidence * ratioConfidence * 100);
+                const scoreBand =
+                  score >= 75 ? { label: "High confidence", tone: "success" as const, hex: "oklch(0.72 0.18 155)" }
+                  : score >= 45 ? { label: "Medium confidence", tone: "primary" as const, hex: "oklch(0.62 0.18 235)" }
+                  : { label: "Building signal", tone: "muted" as const, hex: "oklch(0.70 0.05 230)" };
+
+                const reasons = analytics?.topReasons ?? [];
+                const reasonTotal = reasons.reduce((s, r) => s + r.count, 0);
+                const topReasons = reasons.slice(0, 6);
+
+                const reasonMeta: Record<string, { label: string; desc: string }> = {
+                  ua: { label: "User-Agent signature", desc: "Known crawler / headless UA" },
+                  asn: { label: "ASN / datacenter IP", desc: "Hosting & cloud network" },
+                  rate: { label: "Rate limit hit", desc: "Burst from one source" },
+                  ip: { label: "Blocklisted IP", desc: "Reputation feed match" },
+                  referer: { label: "Referer rule", desc: "Blocked referer pattern" },
+                  geo: { label: "Geo filter", desc: "Country / region rule" },
+                  device: { label: "Device fingerprint", desc: "Mismatched device traits" },
+                  bot: { label: "Generic bot heuristic", desc: "Combined low-trust signal" },
+                  headless: { label: "Headless browser", desc: "Puppeteer / Playwright" },
+                  proxy: { label: "Proxy / VPN", desc: "Anonymizing network" },
+                  verify: { label: "Failed JS verify", desc: "No browser challenge response" },
+                };
+
+                const R2 = 70;
+                const C2 = 2 * Math.PI * R2;
+                const dash2 = (score / 100) * C2;
+
+                return (
+                  <div className="grid gap-4 lg:grid-cols-3">
+                    {/* Score gauge */}
+                    <div className="relative overflow-hidden rounded-2xl border border-border bg-card-gradient p-5 shadow-card">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <ShieldCheck className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h3 className="font-display text-sm font-semibold leading-none">Detection Score</h3>
+                            <p className="mt-1 text-[11px] text-muted-foreground">Bot filter confidence · {rangeLabel}</p>
+                          </div>
+                        </div>
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest"
+                          style={{ color: scoreBand.hex, background: `color-mix(in oklab, ${scoreBand.hex} 12%, transparent)` }}
+                        >
+                          {scoreBand.label}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-center">
+                        {analyticsLoading ? (
+                          <div className="h-44 w-44 animate-pulse rounded-full bg-muted" />
+                        ) : (
+                          <div className="relative h-44 w-44">
+                            <svg viewBox="0 0 200 200" className="h-full w-full -rotate-90">
+                              <defs>
+                                <linearGradient id="botScoreGrad" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="oklch(0.78 0.16 175)" />
+                                  <stop offset="100%" stopColor={scoreBand.hex} />
+                                </linearGradient>
+                              </defs>
+                              <circle cx="100" cy="100" r={R2} fill="none" stroke="oklch(0.94 0.02 230)" strokeWidth="14" />
+                              <circle
+                                cx="100" cy="100" r={R2} fill="none"
+                                stroke="url(#botScoreGrad)"
+                                strokeWidth="14"
+                                strokeLinecap="round"
+                                strokeDasharray={`${dash2} ${C2}`}
+                                className="transition-all duration-700"
+                              />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="font-display text-4xl font-bold tracking-tight">
+                                {score}<span className="text-xl text-muted-foreground">/100</span>
+                              </span>
+                              <span className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                                Score
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-lg border border-border/60 bg-background/40 px-2 py-2">
+                          <div className="font-display text-base font-bold">{bots.toLocaleString()}</div>
+                          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Bots</div>
+                        </div>
+                        <div className="rounded-lg border border-border/60 bg-background/40 px-2 py-2">
+                          <div className="font-display text-base font-bold">{humans.toLocaleString()}</div>
+                          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Humans</div>
+                        </div>
+                        <div className="rounded-lg border border-border/60 bg-background/40 px-2 py-2">
+                          <div className="font-display text-base font-bold">{blockRate.toFixed(1)}%</div>
+                          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Block rate</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Confidence breakdown */}
+                    <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-border bg-card-gradient shadow-card">
+                      <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                            <Gauge className="h-3.5 w-3.5" />
+                          </div>
+                          <div>
+                            <h3 className="font-display text-sm font-semibold leading-none">Confidence Breakdown</h3>
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              Why bots were rejected · {reasonTotal.toLocaleString()} signals
+                            </p>
+                          </div>
+                        </div>
+                        <Button asChild variant="ghost" size="sm" className="h-7 gap-1 text-[11px]">
+                          <Link to="/analytics" search={{ days: rangeDays, linkId: "all" }}>
+                            Details <ArrowUpRight className="h-3 w-3" />
+                          </Link>
+                        </Button>
+                      </div>
+
+                      <div className="p-5 space-y-3">
+                        {analyticsLoading ? (
+                          [1, 2, 3, 4, 5].map((i) => (
+                            <div key={i} className="h-8 animate-pulse rounded bg-secondary/60" />
+                          ))
+                        ) : topReasons.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-10 text-center">
+                            <Shield className="h-8 w-8 text-muted-foreground/50" />
+                            <p className="mt-3 text-sm font-medium">No bot signals yet</p>
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              Reasons appear here as soon as the filter rejects traffic.
+                            </p>
+                          </div>
+                        ) : (
+                          topReasons.map((r) => {
+                            const meta = reasonMeta[r.reason.toLowerCase()] ?? {
+                              label: r.reason,
+                              desc: "Rejection signal",
+                            };
+                            const pct = reasonTotal > 0 ? (r.count / reasonTotal) * 100 : 0;
+                            const conf = Math.min(100, Math.round(pct * 1.4 + 20));
+                            return (
+                              <div key={r.reason} className="space-y-1.5">
+                                <div className="flex items-center justify-between gap-3 text-xs">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold">{meta.label}</span>
+                                      <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                                        {r.reason}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground truncate">{meta.desc}</p>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <div className="font-mono text-xs font-semibold">{r.count.toLocaleString()}</div>
+                                    <div className="text-[10px] text-muted-foreground">{conf}% conf.</div>
+                                  </div>
+                                </div>
+                                <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                                  <div
+                                    className="h-full rounded-full bg-gradient-to-r from-[oklch(0.78_0.16_175)] to-[oklch(0.55_0.20_245)] transition-all duration-500"
+                                    style={{ width: `${Math.max(4, pct)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Create link */}
               <div className="relative overflow-hidden rounded-2xl border border-border bg-card-gradient shadow-card">
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
