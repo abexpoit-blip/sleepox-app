@@ -1348,6 +1348,53 @@ function Dashboard() {
                 </div>
               </div>
 
+              {/* Filter combination */}
+              <div className="rounded-xl border border-border bg-card-gradient p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mr-1">Filter</span>
+                  {([
+                    { key: "device" as const, label: "Device", opts: countryDrill.options.devices },
+                    { key: "browser" as const, label: "Browser", opts: countryDrill.options.browsers },
+                    { key: "os" as const, label: "OS", opts: countryDrill.options.os },
+                  ]).map((f) => (
+                    <Select
+                      key={f.key}
+                      value={drillFilters[f.key] ?? "__all__"}
+                      onValueChange={(v) => updateDrillFilter(f.key, v === "__all__" ? null : v)}
+                    >
+                      <SelectTrigger className="h-8 w-[140px] text-xs">
+                        <SelectValue placeholder={`All ${f.label}s`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All {f.label}s</SelectItem>
+                        {f.opts.map((o) => (
+                          <SelectItem key={o.key} value={o.key}>
+                            {prettyLabel(o.key)} <span className="text-muted-foreground">({o.total})</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ))}
+                  {(drillFilters.device || drillFilters.browser || drillFilters.os) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-xs"
+                      onClick={() => {
+                        const fresh = { device: null, browser: null, os: null };
+                        setDrillFilters(fresh);
+                        if (countryDrillCode) loadCountryDrill(countryDrillCode, fresh);
+                      }}
+                    >
+                      <X className="h-3 w-3 mr-1" /> Clear
+                    </Button>
+                  )}
+                  <span className="ml-auto text-[11px] text-muted-foreground">
+                    {countryDrill.totals.total.toLocaleString()} clicks · CTR {(countryDrill.totals.ctr * 100).toFixed(1)}% · {countryDrill.totals.humans.toLocaleString()} conv.
+                  </span>
+                </div>
+              </div>
+
               {/* Device + Browser side by side */}
               <div className="grid gap-4 md:grid-cols-2">
                 {[
