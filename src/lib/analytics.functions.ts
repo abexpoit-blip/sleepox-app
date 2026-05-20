@@ -68,7 +68,7 @@ export const getAnalytics = createServerFn({ method: "POST" })
     type AggRow = { link_id: string; day: string; humans: number; bots: number };
     const { data: aggRaw } = await supabase.rpc("clicks_daily", {
       p_since: since,
-      p_link_id: data.linkId ?? null,
+      p_link_id: data.linkId ?? undefined,
     });
     const agg = (aggRaw ?? []) as AggRow[];
 
