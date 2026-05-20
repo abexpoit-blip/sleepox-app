@@ -828,6 +828,7 @@ export const resolveLink = createServerFn({ method: "POST" })
         browser: uaInfo.browser,
         variant: chosenVariant.slug,
         bot_score: Math.min(a.score + (rateLimited ? 60 : 0) + (targetingCheck.blocked ? 100 : 0), 500),
+        fingerprint_hash: await serverFingerprintHash(a, uaInfo, country),
         signals: phase3Signals({
           source: "silent",
           request: a,
@@ -946,6 +947,7 @@ export const verifyHuman = createServerFn({ method: "POST" })
         browser: parseUA(a.ua).browser,
         variant: data.variant,
         bot_score: Math.min(a.score, 500),
+        fingerprint_hash: await serverFingerprintHash(a, parseUA(a.ua), getRequestHeader("cf-ipcountry") || null),
         signals: phase3Signals({
           source: "verify-silent",
           request: a,
