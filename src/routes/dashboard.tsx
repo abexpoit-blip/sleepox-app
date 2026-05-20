@@ -51,7 +51,6 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { getAnalytics, getCountryDrilldown, getAdRejectDiagnostics } from "@/lib/analytics.functions";
 import {
-  getBrandIcon,
   prettyLabel,
   BrandBadge,
   CountryFlag,
