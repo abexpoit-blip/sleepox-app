@@ -23,6 +23,9 @@ import {
   Play,
   Loader2,
   AlertCircle,
+  ShieldCheck,
+  Shield,
+  Gauge,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
