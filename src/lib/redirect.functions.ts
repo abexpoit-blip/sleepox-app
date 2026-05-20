@@ -807,6 +807,19 @@ export const resolveLink = createServerFn({ method: "POST" })
         os: uaInfo.os,
         browser: uaInfo.browser,
         variant: chosenVariant.slug,
+        bot_score: Math.min(a.score + (rateLimited ? 60 : 0) + (targetingCheck.blocked ? 100 : 0), 500),
+        signals: phase3Signals({
+          source: "silent",
+          request: a,
+          reasons: defenseReasons.split(",").filter(Boolean),
+          rateHits,
+          targetBlocked: targetingCheck.blocked,
+          targetReason: targetingCheck.reason,
+          fbHit,
+          refAction,
+          timeAction,
+        }),
+        challenge_passed: false,
         ...attr,
       });
 
@@ -912,6 +925,16 @@ export const verifyHuman = createServerFn({ method: "POST" })
         os: parseUA(a.ua).os,
         browser: parseUA(a.ua).browser,
         variant: data.variant,
+        bot_score: Math.min(a.score, 500),
+        signals: phase3Signals({
+          source: "verify-silent",
+          request: a,
+          reasons: [fbHit || "", refAction ? `referer:${refAction}:${refHost}` : "", timeAction ? `time:${timeAction}` : ""],
+          fbHit,
+          refAction,
+          timeAction,
+        }),
+        challenge_passed: false,
       });
       return { ok: false as const, reason: "blocklist" };
     }
