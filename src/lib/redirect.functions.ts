@@ -627,22 +627,25 @@ export const resolveLink = createServerFn({ method: "POST" })
 
     const chosenVariant = variants.find((v) => v.slug === chosenSlug) ?? variants[0];
 
-    await supabaseAdmin.from("clicks").insert({
-      link_id: link.id,
-      ip_address: ip || null,
-      country,
-      user_agent: a.ua || null,
-      referer: referer || null,
-      is_bot: silentBot || a.isBot,
-      bot_reason: silentBot ? `silent:${defenseReasons}` : (defenseReasons || null),
-      device: uaInfo.device,
-      os: uaInfo.os,
-      browser: uaInfo.browser,
-      variant: chosenVariant.slug,
-      ...attr,
-    });
+    // For silentBot we log a click here (verifyHuman won't run for them).
+    // For requireVerify we SKIP the insert — verifyHuman inserts on completion
+    // so we get exactly one click row per visit and don't inflate counters.
+    if (silentBot) {
+      await supabaseAdmin.from("clicks").insert({
+        link_id: link.id,
+        ip_address: ip || null,
+        country,
+        user_agent: a.ua || null,
+        referer: referer || null,
+        is_bot: true,
+        bot_reason: `silent:${defenseReasons}`,
+        device: uaInfo.device,
+        os: uaInfo.os,
+        browser: uaInfo.browser,
+        variant: chosenVariant.slug,
+        ...attr,
+      });
 
-    if (a.isBot || silentBot) {
       const { data: cur } = await supabaseAdmin
         .from("links").select("bot_clicks_count").eq("id", link.id).single();
       if (cur) {
