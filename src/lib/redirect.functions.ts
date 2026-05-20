@@ -560,13 +560,7 @@ export const resolveLink = createServerFn({ method: "POST" })
       });
 
       if (!duplicateClick) {
-        const { data: cur } = await supabaseAdmin
-          .from("links").select("clicks_count").eq("id", link.id).single();
-        if (cur) {
-          await supabaseAdmin.from("links")
-            .update({ clicks_count: cur.clicks_count + 1 })
-            .eq("id", link.id);
-        }
+        await supabaseAdmin.rpc("increment_link_clicks", { p_link_id: link.id });
       }
       if (link.duplicate_protection && !duplicateClick) await recordDuplicateClick(ip, link.id);
 
