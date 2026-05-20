@@ -1415,14 +1415,13 @@ function Dashboard() {
                         {block.rows.length === 0 ? (
                           <p className="text-xs text-muted-foreground">No data</p>
                         ) : block.rows.map((r) => {
-                          const Icon = getBrandIcon(r.key);
                           const pct = (r.total / max) * 100;
                           const ctr = r.total ? (r.humans / r.total) * 100 : 0;
                           return (
                             <div key={r.key} className="space-y-1">
                               <div className="flex items-center justify-between text-xs gap-2">
-                                <span className="flex items-center gap-1.5 min-w-0">
-                                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                                <span className="flex items-center gap-2 min-w-0">
+                                  <BrandBadge name={r.key} />
                                   <span className="truncate font-medium">{prettyLabel(r.key)}</span>
                                 </span>
                                 <span className="font-mono text-muted-foreground shrink-0">
@@ -1448,17 +1447,53 @@ function Dashboard() {
                   {countryDrill.byOS.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No data</p>
                   ) : countryDrill.byOS.map((r) => {
-                    const Icon = getBrandIcon(r.key);
                     const ctr = r.total ? (r.humans / r.total) * 100 : 0;
                     return (
                       <div key={r.key} className="flex items-center justify-between rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-xs">
-                        <span className="flex items-center gap-2"><Icon className="h-3.5 w-3.5" /> <span className="font-medium">{prettyLabel(r.key)}</span></span>
-                        <span className="font-mono text-muted-foreground">{r.total} · <span className="text-success">{ctr.toFixed(0)}%</span></span>
+                        <span className="flex items-center gap-2 min-w-0">
+                          <BrandBadge name={r.key} />
+                          <span className="truncate font-medium">{prettyLabel(r.key)}</span>
+                        </span>
+                        <span className="font-mono text-muted-foreground shrink-0">{r.total} · <span className="text-success">{ctr.toFixed(0)}%</span></span>
                       </div>
                     );
                   })}
                 </div>
               </div>
+
+              {/* By Referrer */}
+              {(countryDrill.byReferrer?.length ?? 0) > 0 && (
+                <div className="rounded-xl border border-border bg-card-gradient p-4">
+                  <h4 className="font-display text-sm font-semibold flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-primary" /> Top Referrers
+                  </h4>
+                  <div className="mt-3 space-y-2.5">
+                    {(() => {
+                      const refMax = Math.max(1, ...countryDrill.byReferrer.map((r) => r.total));
+                      return countryDrill.byReferrer.map((r) => {
+                        const pct = (r.total / refMax) * 100;
+                        const ctr = r.total ? (r.humans / r.total) * 100 : 0;
+                        return (
+                          <div key={r.key} className="space-y-1">
+                            <div className="flex items-center justify-between text-xs gap-2">
+                              <span className="flex items-center gap-2 min-w-0">
+                                <ReferrerFavicon host={r.key} />
+                                <span className="truncate font-medium">{prettyReferrer(r.key)}</span>
+                              </span>
+                              <span className="font-mono text-muted-foreground shrink-0">
+                                {r.total} · <span className="text-success">{ctr.toFixed(0)}%</span>
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                              <div className="h-full rounded-full bg-gradient-to-r from-[oklch(0.75_0.16_215)] to-[oklch(0.55_0.20_245)]" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              )}
 
               {/* Top links from this country */}
               {countryDrill.byLink.length > 0 && (
