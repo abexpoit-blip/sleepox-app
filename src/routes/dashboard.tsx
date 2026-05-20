@@ -1173,7 +1173,7 @@ function Dashboard() {
                                 Real
                               </div>
                               <div className="font-mono text-sm font-bold text-success">
-                                {l.clicks_count}
+                                {s.humans}
                               </div>
                             </div>
                             <div className="text-right">
