@@ -163,6 +163,13 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* FAQ */}
+      <FaqSection
+        title="Frequently asked questions"
+        subtitle="Everything you need to know about LinkShield and how it protects your ads."
+        items={HOMEPAGE_FAQ}
+      />
+
       {/* CTA */}
       <section className="mx-auto max-w-5xl px-6 py-24">
         <div className="relative overflow-hidden rounded-3xl border border-primary/30 bg-card-gradient p-12 text-center shadow-elegant">
