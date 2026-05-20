@@ -86,4 +86,3 @@ echo "PASS criteria:"
 echo "  - HEAD returns 200/302"
 echo "  - newest rows have score≠'-', fp≠'-', has_sig=t"
 echo "  - source values match: direct / silent / blocked / verify-silent"
-REMOTE_EOF
