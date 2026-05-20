@@ -780,6 +780,10 @@ export const resolveLink = createServerFn({ method: "POST" })
         challenge_passed: false,
         ...attrB,
       });
+      logRedirectEvent("resolve.decision", {
+        code: data.code, branch: "blocked", verifyExpected: false,
+        score: a.score, reasons: suspicionReasons,
+      });
       return {
         found: true as const,
         blocked: true as const,
@@ -787,6 +791,7 @@ export const resolveLink = createServerFn({ method: "POST" })
         message: cfg.safe_page_message,
       };
     }
+
 
     const uaInfo = parseUA(a.ua);
     const attr = attributionFromRequestUrl();
