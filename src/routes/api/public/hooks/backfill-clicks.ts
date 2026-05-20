@@ -128,7 +128,7 @@ export const Route = createFileRoute("/api/public/hooks/backfill-clicks")({
             continue;
           }
 
-          const { error: uerr } = await sb.from("clicks").update(patch).eq("id", r.id);
+          const { error: uerr } = await sb.from("clicks").update(patch as never).eq("id", r.id);
           if (uerr) {
             errors.push(`${r.id}: ${uerr.message}`);
           } else {
