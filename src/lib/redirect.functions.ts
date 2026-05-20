@@ -1267,5 +1267,4 @@ export const verifyHuman = createServerFn({ method: "POST" })
     return { ok: true as const, destination };
   });
 
-  });
 
