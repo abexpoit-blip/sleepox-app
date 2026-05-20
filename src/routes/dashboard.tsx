@@ -1301,7 +1301,7 @@ function Dashboard() {
       </Dialog>
 
       {/* Country drilldown dialog */}
-      <Dialog open={!!countryDrillCode} onOpenChange={(o) => { if (!o) { setCountryDrillCode(null); setCountryDrill(null); } }}>
+      <Dialog open={!!countryDrillCode} onOpenChange={(o) => { if (!o) { setCountryDrillCode(null); setCountryDrill(null); setDrillFilters({ device: null, browser: null, os: null }); } }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle className="font-display flex items-center gap-2">
