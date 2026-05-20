@@ -39,6 +39,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { getAnalytics } from "@/lib/analytics.functions";
+import { getBrandIcon, prettyLabel } from "@/components/brand-icons";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -707,8 +708,18 @@ function Dashboard() {
                   { title: "By Browser", rows: analytics?.byBrowser ?? [] },
                   { title: "By OS", rows: analytics?.byOS ?? [] },
                 ] as const).map((panel) => {
-                  const top = panel.rows.slice(0, 6);
-                  const maxTotal = Math.max(1, ...top.map((r) => r.total));
+                  // Drop the synthetic "bot" / "unknown" bucket — bot totals
+                  // are already shown in the bots-blocked card above, and
+                  // showing them again as a row with 0 humans is misleading.
+                  const cleaned = panel.rows.filter((r) => {
+                    const k = (r.key ?? "").toLowerCase();
+                    return k !== "bot" && k !== "unknown";
+                  });
+                  const top = cleaned.slice(0, 6);
+                  // Scale bars to the largest *human* count so a single
+                  // mostly-human row doesn't get dwarfed by a bot-heavy one.
+                  const maxHumans = Math.max(1, ...top.map((r) => r.humans));
+                  const maxBots = Math.max(1, ...top.map((r) => r.bots));
                   return (
                     <div key={panel.title} className="relative overflow-hidden rounded-2xl border border-border bg-card-gradient shadow-card">
                       <div className="border-b border-border/60 px-5 py-3">
@@ -724,23 +735,32 @@ function Dashboard() {
                           <p className="text-xs text-muted-foreground py-4 text-center">No data yet</p>
                         ) : (
                           top.map((row) => {
-                            const humanPct = (row.humans / maxTotal) * 100;
-                            const botPct = (row.bots / maxTotal) * 100;
+                            const humanPct = (row.humans / maxHumans) * 100;
+                            const botPct = (row.bots / maxBots) * 100;
                             const passRate = row.total ? (row.humans / row.total) * 100 : 0;
+                            const Icon = getBrandIcon(row.key);
+                            const label = prettyLabel(row.key);
                             return (
-                              <div key={row.key} className="space-y-1">
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="font-medium capitalize truncate max-w-[60%]">{row.key}</span>
-                                  <span className="text-muted-foreground tabular-nums">
+                              <div key={row.key} className="space-y-1.5">
+                                <div className="flex items-center justify-between text-xs gap-2">
+                                  <span className="flex items-center gap-2 min-w-0">
+                                    <Icon className="h-4 w-4 shrink-0" />
+                                    <span className="font-medium truncate">{label}</span>
+                                  </span>
+                                  <span className="text-muted-foreground tabular-nums shrink-0">
                                     <span className="text-success">{row.humans}</span>
                                     {" / "}
                                     <span className="text-destructive">{row.bots}</span>
                                     <span className="ml-1.5 text-foreground/70">({passRate.toFixed(0)}%)</span>
                                   </span>
                                 </div>
-                                <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-secondary/60">
-                                  <div className="bg-success" style={{ width: `${humanPct}%` }} />
-                                  <div className="bg-destructive/80" style={{ width: `${botPct}%` }} />
+                                <div className="grid grid-cols-2 gap-1">
+                                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary/60">
+                                    <div className="h-full bg-success" style={{ width: `${humanPct}%` }} />
+                                  </div>
+                                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary/60">
+                                    <div className="h-full bg-destructive/80" style={{ width: `${botPct}%` }} />
+                                  </div>
                                 </div>
                               </div>
                             );
