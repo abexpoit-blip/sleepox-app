@@ -76,6 +76,7 @@ function PricingPage() {
 
       <section className="bg-hero">
         <div className="mx-auto max-w-3xl px-6 py-20 text-center">
+          <Breadcrumbs items={PRICING_CRUMBS} className="mb-6 justify-center" />
           <h1 className="text-4xl font-bold md:text-5xl">Simple, transparent pricing</h1>
           <p className="mt-4 text-muted-foreground">Pick the plan that fits your ad volume. Upgrade or cancel anytime.</p>
         </div>
