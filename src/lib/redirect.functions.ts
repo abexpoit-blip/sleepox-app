@@ -856,6 +856,7 @@ export const resolveLink = createServerFn({ method: "POST" })
 
       const geoDev = await pickGeoDeviceDestination(link.id, country, uaInfo.device, uaInfo.os);
       if (geoDev) {
+        logRedirectEvent("resolve.decision", { code: data.code, branch: "direct", verifyExpected: false, score: a.score, destination: geoDev, duplicateClick });
         return { found: true as const, blocked: false as const, direct: true as const, redirectTo: geoDev };
       }
       const { data: destRows } = await supabaseAdmin
@@ -863,8 +864,10 @@ export const resolveLink = createServerFn({ method: "POST" })
         .select("url,weight,is_active")
         .eq("link_id", link.id);
       const destination = pickWeightedDestination(destRows ?? [], link.destination_url);
+      logRedirectEvent("resolve.decision", { code: data.code, branch: "direct", verifyExpected: false, score: a.score, destination, duplicateClick });
       return { found: true as const, blocked: false as const, direct: true as const, redirectTo: destination };
     }
+
 
     // NOTE: silent bot path renders a real prelander variant, but never
     // auto-triggers verifyHuman and never reveals the real destination.
