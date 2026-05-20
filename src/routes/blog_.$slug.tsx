@@ -3,7 +3,7 @@ import { ArrowRight, Calendar, Clock } from "lucide-react";
 import { BLOG_POSTS, getPostBySlug, getRelatedPosts, type BlogPost } from "@/lib/blog-posts";
 import { MarkdownContent } from "@/components/markdown-content";
 import { BlogHeader, BlogFooterCta } from "./blog";
-import { Breadcrumbs } from "@/components/breadcrumbs";
+import { Breadcrumbs, buildBreadcrumbSchema } from "@/components/breadcrumbs";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/blog_/$slug")({
@@ -58,15 +58,12 @@ export const Route = createFileRoute("/blog_/$slug")({
         },
         {
           type: "application/ld+json",
-          children: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: "https://sleepox.com/" },
-              { "@type": "ListItem", position: 2, name: "Blog", item: "https://sleepox.com/blog" },
-              { "@type": "ListItem", position: 3, name: post.title, item: url },
-            ],
-          }),
+          children: JSON.stringify(
+            buildBreadcrumbSchema([
+              { label: "Blog", to: "/blog" },
+              { label: post.title, to: `/blog/${post.slug}` },
+            ]),
+          ),
         },
       ],
     };
