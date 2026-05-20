@@ -151,8 +151,56 @@ function LinkSettingsPage() {
     void load();
   };
 
+  const onLogoFileChosen = async (file: File | null) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Logo must be under 2 MB");
+      return;
+    }
+    const { data: sess } = await supabase.auth.getSession();
+    const userId = sess.session?.user.id;
+    if (!userId) {
+      toast.error("Not signed in");
+      return;
+    }
+    setUploadingLogo(true);
+    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${userId}/${linkId}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("link-logos")
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) {
+      setUploadingLogo(false);
+      toast.error(upErr.message);
+      return;
+    }
+    const { data: pub } = supabase.storage.from("link-logos").getPublicUrl(path);
+    setBrandLogoUrl(pub.publicUrl);
+    setUploadingLogo(false);
+    toast.success("Logo uploaded — don't forget to Save branding");
+  };
 
+  const saveBrand = async () => {
+    setSavingBrand(true);
+    const { error } = await supabase
+      .from("links")
+      .update({
+        brand_name: brandName.trim() || null,
+        brand_tagline: brandTagline.trim() || null,
+        brand_color: brandColor || null,
+        brand_logo_url: brandLogoUrl,
+      })
+      .eq("id", linkId);
+    setSavingBrand(false);
+    if (error) return toast.error(error.message);
+    toast.success("Branding saved");
+    void load();
+  };
 
+  const removeLogo = () => {
+    setBrandLogoUrl(null);
+    toast.message("Logo cleared — click Save branding to apply");
+  };
 
   const addDest = async () => {
     try {
