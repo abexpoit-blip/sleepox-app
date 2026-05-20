@@ -6,22 +6,30 @@ import { Logo } from "@/components/logo";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "LinkShield — Smart URL Shortener for Ad Boosting" },
+      { title: "LinkShield — Bot-Filtered URL Shortener for Facebook, Instagram & TikTok Ads" },
       {
         name: "description",
         content:
-          "Bot-filtered short links built for Facebook & Instagram ad campaigns. Cut wasted spend, boost real CTR, protect your ad accounts.",
+          "Free smart URL shortener with bot filtering, geo targeting, and click fraud protection. Boost CTR, cut wasted ad spend, and protect Facebook, Instagram, TikTok & Google Ads accounts with branded short links and live analytics.",
       },
-      { property: "og:title", content: "LinkShield — Smart URL Shortener for Ad Boosting" },
+      {
+        name: "keywords",
+        content:
+          "url shortener, bot filter short link, click fraud protection, facebook ads link cloaker, instagram ads short url, tiktok ads link tracker, google ads click protection, branded short links, link tracking, geo targeted links, ad spend protection, media buyer tools, ctr booster, smart links, link rotator, conversion tracking",
+      },
+      { property: "og:title", content: "LinkShield — Bot-Filtered URL Shortener for Facebook, Instagram & TikTok Ads" },
       {
         property: "og:description",
         content:
-          "Bot-filtered short links built for Facebook & Instagram ad campaigns. Cut wasted spend, boost real CTR, protect your ad accounts.",
+          "Smart short links with bot filtering, geo targeting and click fraud protection — built for Meta, TikTok and Google Ads.",
       },
       { property: "og:url", content: "https://sleepox.com/" },
+      { name: "twitter:title", content: "LinkShield — Bot-Filtered URL Shortener for Ad Campaigns" },
+      { name: "twitter:description", content: "Short links built for Facebook, Instagram, TikTok & Google Ads — block bots, boost CTR." },
     ],
     links: [{ rel: "canonical", href: "https://sleepox.com/" }],
   }),
+
   component: LandingPage,
 });
 

@@ -5,14 +5,16 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "Pricing — LinkShield" },
-      { name: "description", content: "Simple, transparent pricing for agencies and media buyers running Meta ads." },
-      { property: "og:title", content: "Pricing — LinkShield" },
-      { property: "og:description", content: "Simple, transparent pricing for agencies and media buyers running Meta ads." },
+      { title: "Pricing — LinkShield URL Shortener & Click Fraud Protection" },
+      { name: "description", content: "Affordable plans from $9/mo for media buyers, agencies, and ad teams. Bot-filtered short links, click fraud protection, geo targeting, and analytics for Facebook, Instagram, TikTok & Google Ads." },
+      { name: "keywords", content: "url shortener pricing, click fraud protection pricing, facebook ads tool pricing, link shortener plans, media buyer software pricing, agency link tracking pricing" },
+      { property: "og:title", content: "Pricing — LinkShield URL Shortener & Click Fraud Protection" },
+      { property: "og:description", content: "Plans from $9/mo. Bot-filtered short links and click fraud protection for Meta, TikTok & Google Ads." },
       { property: "og:url", content: "https://sleepox.com/pricing" },
     ],
     links: [{ rel: "canonical", href: "https://sleepox.com/pricing" }],
   }),
+
   component: PricingPage,
 });
 
