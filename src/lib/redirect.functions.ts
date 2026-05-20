@@ -48,6 +48,75 @@ function extractAttribution(urlLike: string | null | undefined) {
   return out;
 }
 
+// ---------- Phase 3: Fingerprint hashing + repeat detection ----------
+
+/**
+ * Stable SHA-256 hash of stable fingerprint parts (no volatile behavior counters).
+ * Same device returning later → same hash.
+ */
+async function hashFingerprint(fp: {
+  ua: string;
+  platform: string;
+  languages: string[];
+  hwConcurrency: number;
+  deviceMemory: number;
+  screen: { w: number; h: number; cd: number };
+  tz: string;
+  canvasHash: string;
+}): Promise<string> {
+  const payload = [
+    fp.ua,
+    fp.platform,
+    fp.languages.join(","),
+    String(fp.hwConcurrency),
+    String(fp.deviceMemory),
+    `${fp.screen.w}x${fp.screen.h}x${fp.screen.cd}`,
+    fp.tz,
+    fp.canvasHash,
+  ].join("|");
+  try {
+    const buf = new TextEncoder().encode(payload);
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return Array.from(new Uint8Array(digest))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")
+      .slice(0, 32);
+  } catch {
+    let h = 5381;
+    for (let i = 0; i < payload.length; i++) h = ((h << 5) + h + payload.charCodeAt(i)) | 0;
+    return Math.abs(h).toString(16).padStart(8, "0");
+  }
+}
+
+/**
+ * Count recent clicks sharing this fingerprint hash from DIFFERENT IPs in last N minutes.
+ * High count → same browser identity spraying from proxy pool → strong bot signal.
+ */
+async function repeatFingerprintHits(
+  fpHash: string,
+  currentIp: string,
+  windowMinutes = 10,
+): Promise<number> {
+  if (!fpHash) return 0;
+  try {
+    const since = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
+    const { data } = await supabaseAdmin
+      .from("clicks")
+      .select("ip_address")
+      .eq("fingerprint_hash", fpHash)
+      .gte("created_at", since)
+      .limit(50);
+    if (!data) return 0;
+    const distinctIps = new Set(
+      data.map((r) => r.ip_address).filter((ip): ip is string => !!ip && ip !== currentIp),
+    );
+    return distinctIps.size;
+  } catch {
+    return 0;
+  }
+}
+
+
 function refererHost(ref: string | null | undefined) {
   if (!ref) return null;
   try { return new URL(ref).hostname.replace(/^www\./, "").slice(0, 120); }
@@ -865,7 +934,36 @@ export const verifyHuman = createServerFn({ method: "POST" })
       score += 25; reasons.push("ua-mismatch");
     }
 
+    // Phase 3: stable fingerprint hash + repeat-from-different-IPs penalty
+    const fpHash = await hashFingerprint(fp);
+    const repeatIps = await repeatFingerprintHits(fpHash, ip, 10);
+    if (repeatIps >= 2) {
+      score += 25 + Math.min(repeatIps, 10) * 5; // 35..75
+      reasons.push(`fp-repeat:${repeatIps}ip/10m`);
+    }
+
     const isBot = a.hardBot || (!looksLikeRealBrowser && score >= cfg.block_threshold_score);
+    const challengePassed = !isBot && interactions > 0 && fp.timeOnPage >= 100;
+
+    const signals = {
+      webdriver: fp.webdriver,
+      languages: fp.languages.length,
+      screen: fp.screen,
+      hw: fp.hwConcurrency,
+      mem: fp.deviceMemory,
+      tz: fp.tz,
+      plugins: fp.plugins,
+      touchPoints: fp.touchPoints,
+      hasChrome: fp.hasChrome,
+      mouse: fp.mouse,
+      scroll: fp.scroll,
+      key: fp.key,
+      touch: fp.touch,
+      timeOnPage: fp.timeOnPage,
+      canvasHash: fp.canvasHash,
+      repeatIps,
+      reasons,
+    };
 
     const attr2 = attributionFromReferer();
     await supabaseAdmin.from("clicks").insert({
@@ -880,8 +978,13 @@ export const verifyHuman = createServerFn({ method: "POST" })
       os: uaInfo2.os,
       browser: uaInfo2.browser,
       variant: data.variant,
+      bot_score: Math.min(score, 500),
+      fingerprint_hash: fpHash,
+      signals,
+      challenge_passed: challengePassed,
       ...attr2,
     });
+
 
     if (isBot) {
       await supabaseAdmin.rpc("increment_link_bot_clicks", { p_link_id: link.id });
