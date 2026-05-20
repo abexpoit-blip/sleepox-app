@@ -547,6 +547,10 @@ export type Database = {
         Row: {
           adsterra_direct_link: string | null
           bot_clicks_count: number
+          brand_color: string | null
+          brand_logo_url: string | null
+          brand_name: string | null
+          brand_tagline: string | null
           clicks_count: number
           created_at: string
           destination_url: string
@@ -566,6 +570,10 @@ export type Database = {
         Insert: {
           adsterra_direct_link?: string | null
           bot_clicks_count?: number
+          brand_color?: string | null
+          brand_logo_url?: string | null
+          brand_name?: string | null
+          brand_tagline?: string | null
           clicks_count?: number
           created_at?: string
           destination_url: string
@@ -585,6 +593,10 @@ export type Database = {
         Update: {
           adsterra_direct_link?: string | null
           bot_clicks_count?: number
+          brand_color?: string | null
+          brand_logo_url?: string | null
+          brand_name?: string | null
+          brand_tagline?: string | null
           clicks_count?: number
           created_at?: string
           destination_url?: string
@@ -669,7 +681,9 @@ export type Database = {
       prelander_variants: {
         Row: {
           category: string
+          country_codes: string[]
           created_at: string
+          device: string
           id: string
           intro: string
           is_active: boolean
@@ -683,7 +697,9 @@ export type Database = {
         }
         Insert: {
           category: string
+          country_codes?: string[]
           created_at?: string
+          device?: string
           id?: string
           intro?: string
           is_active?: boolean
@@ -697,7 +713,9 @@ export type Database = {
         }
         Update: {
           category?: string
+          country_codes?: string[]
           created_at?: string
+          device?: string
           id?: string
           intro?: string
           is_active?: boolean
