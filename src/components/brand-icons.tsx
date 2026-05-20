@@ -209,6 +209,22 @@ export function prettyLabel(rawKey: string) {
 const BADGE_CLASS =
   "inline-flex h-5 w-5 items-center justify-center rounded-md bg-background/70 ring-1 ring-border/60 shadow-sm shrink-0 overflow-hidden";
 
+function BadgeSkeleton({ className }: { className?: string }) {
+  return (
+    <span className={`${BADGE_CLASS} ${className ?? ""}`}>
+      <span className="inline-block h-3 w-3 animate-pulse rounded-sm bg-muted/60" />
+    </span>
+  );
+}
+
+function BadgeUnknown({ className }: { className?: string }) {
+  return (
+    <span className={`${BADGE_CLASS} ${className ?? ""}`}>
+      <Globe className="h-3 w-3 text-muted-foreground/40" />
+    </span>
+  );
+}
+
 export const COUNTRY_NAMES: Record<string, string> = {
   US: "United States", ID: "Indonesia", TH: "Thailand", SG: "Singapore",
   IN: "India", GB: "United Kingdom", DE: "Germany", FR: "France",
@@ -231,7 +247,6 @@ function CachedImage({
   width,
   height,
   className,
-  fallback,
 }: {
   src: string;
   srcSet?: string;
@@ -239,7 +254,6 @@ function CachedImage({
   width: number;
   height: number;
   className?: string;
-  fallback: React.ReactNode;
 }) {
   // Skip remote calls we already know are broken in this session.
   const initiallyFailed = isKnownFailed(src);
@@ -259,10 +273,8 @@ function CachedImage({
     };
   }, [src, state]);
 
-  if (state === "failed") return <>{fallback}</>;
-  // Only render the <img> after the throttled loader resolves; the browser
-  // HTTP cache then serves the bytes from memory/disk.
-  if (state !== "loaded") return <>{fallback}</>;
+  if (state === "failed") return <BadgeUnknown className={className} />;
+  if (state !== "loaded") return <BadgeSkeleton className={className} />;
   return (
     <img
       src={src}
@@ -280,11 +292,7 @@ function CachedImage({
 export function CountryFlag({ cc, className }: { cc: string; className?: string }) {
   const up = (cc || "").toUpperCase();
   if (!/^[A-Z]{2}$/.test(up)) {
-    return (
-      <span className={`${BADGE_CLASS} ${className ?? ""}`}>
-        <Globe className="h-3 w-3 text-muted-foreground" />
-      </span>
-    );
+    return <BadgeUnknown className={className} />;
   }
   const lo = up.toLowerCase();
   const src = `https://flagcdn.com/w40/${lo}.png`;
@@ -298,7 +306,6 @@ export function CountryFlag({ cc, className }: { cc: string; className?: string 
         width={20}
         height={15}
         className="h-full w-full object-cover"
-        fallback={<Globe className="h-3 w-3 text-muted-foreground" />}
       />
     </span>
   );
@@ -316,11 +323,7 @@ export function BrandBadge({ name, className }: { name: string; className?: stri
 export function ReferrerFavicon({ host, className }: { host: string; className?: string }) {
   const h = (host || "").toLowerCase().trim();
   if (!h || h === "direct" || h === "unknown") {
-    return (
-      <span className={`${BADGE_CLASS} ${className ?? ""}`}>
-        <Globe className="h-3 w-3 text-primary" />
-      </span>
-    );
+    return <BadgeUnknown className={className} />;
   }
   const domain = h.replace(/^www\./, "").split("/")[0];
   const src = `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(domain)}`;
@@ -332,12 +335,10 @@ export function ReferrerFavicon({ host, className }: { host: string; className?:
         width={16}
         height={16}
         className="h-4 w-4"
-        fallback={<Globe className="h-3 w-3 text-primary" />}
       />
     </span>
   );
 }
-
 
 export function prettyReferrer(host: string) {
   const h = (host || "").toLowerCase().trim();
