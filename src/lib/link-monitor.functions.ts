@@ -167,18 +167,6 @@ export const getLinkMonitor = createServerFn({ method: "POST" })
       referer_host: c.referer_host,
     }));
 
-    return {
-      link: {
-        id: link.id,
-        short_code: link.short_code,
-        title: link.title,
-        destination_url: link.destination_url,
-        status: link.status,
-        created_at: link.created_at,
-      },
-      totals: { impressions, humans, bots, botRate, conversionRate, uniqHumanIps },
-      timeseries: [...tsMap.values()],
-      rejectionReasons,
     // Accurate dimension breakdowns via SQL aggregation (full table, not 10k sample).
     type BrRow = { key: string; total: number; humans: number; bots: number };
     const dims = [
