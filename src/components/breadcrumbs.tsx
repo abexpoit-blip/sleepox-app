@@ -3,8 +3,8 @@ import { ChevronRight, Home } from "lucide-react";
 
 export type BreadcrumbItem = {
   label: string;
-  /** Absolute path starting with `/`. Omit on the current page (last item). */
-  to?: string;
+  /** Absolute path starting with `/` including the current page. */
+  to: string;
 };
 
 export type BreadcrumbProps = {
