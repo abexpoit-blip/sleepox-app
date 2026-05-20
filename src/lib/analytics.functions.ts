@@ -153,3 +153,78 @@ export const getAnalytics = createServerFn({ method: "POST" })
       links: (links ?? []).map((l) => ({ id: l.id, short_code: l.short_code, title: l.title })),
     };
   });
+
+const CountrySchema = z.object({
+  country: z.string().min(2).max(2),
+  days: z.number().int().min(1).max(90).default(7),
+  linkId: z.string().uuid().optional().nullable(),
+});
+
+export const getCountryDrilldown = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => CountrySchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const since = new Date(Date.now() - data.days * 24 * 3600 * 1000).toISOString();
+
+    let linksQ = supabase.from("links").select("id, short_code, title");
+    if (data.linkId) linksQ = linksQ.eq("id", data.linkId);
+    const { data: links } = await linksQ;
+    const linkIds = (links ?? []).map((l) => l.id);
+    if (linkIds.length === 0) {
+      return {
+        country: data.country,
+        totals: { total: 0, humans: 0, bots: 0, ctr: 0 },
+        byDevice: [], byBrowser: [], byOS: [], byLink: [], timeseries: [],
+      };
+    }
+
+    const { data: clicksRaw } = await supabase
+      .from("clicks")
+      .select("link_id,is_bot,device,os,browser,created_at")
+      .in("link_id", linkIds)
+      .eq("country", data.country.toUpperCase())
+      .gte("created_at", since)
+      .limit(10000);
+
+    const clicks = (clicksRaw ?? []) as Click[];
+    const total = clicks.length;
+    const bots = clicks.filter((c) => c.is_bot).length;
+    const humans = total - bots;
+    const ctr = total ? humans / total : 0;
+
+    const tsMap = new Map<string, { date: string; humans: number; bots: number }>();
+    for (let i = data.days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      tsMap.set(d, { date: d, humans: 0, bots: 0 });
+    }
+    for (const c of clicks) {
+      const d = c.created_at.slice(0, 10);
+      const e = tsMap.get(d);
+      if (e) { if (c.is_bot) e.bots += 1; else e.humans += 1; }
+    }
+
+    const byLink = (links ?? [])
+      .map((l) => {
+        const lc = clicks.filter((c) => c.link_id === l.id);
+        const lt = lc.length;
+        const lb = lc.filter((c) => c.is_bot).length;
+        return {
+          id: l.id, short_code: l.short_code, title: l.title,
+          total: lt, humans: lt - lb, bots: lb, conversion: lt ? (lt - lb) / lt : 0,
+        };
+      })
+      .filter((l) => l.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 8);
+
+    return {
+      country: data.country.toUpperCase(),
+      totals: { total, humans, bots, ctr },
+      byDevice: bucket(clicks, (c) => c.device),
+      byBrowser: bucket(clicks, (c) => c.browser).slice(0, 8),
+      byOS: bucket(clicks, (c) => c.os).slice(0, 8),
+      byLink,
+      timeseries: [...tsMap.values()],
+    };
+  });

@@ -41,7 +41,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { getAnalytics } from "@/lib/analytics.functions";
+import { getAnalytics, getCountryDrilldown } from "@/lib/analytics.functions";
 import { getBrandIcon, prettyLabel } from "@/components/brand-icons";
 
 export const Route = createFileRoute("/dashboard")({
@@ -114,6 +114,10 @@ function Dashboard() {
   const [refreshTick, setRefreshTick] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [linksDialogOpen, setLinksDialogOpen] = useState(false);
+  const fetchCountry = useServerFn(getCountryDrilldown);
+  const [countryDrill, setCountryDrill] = useState<Awaited<ReturnType<typeof getCountryDrilldown>> | null>(null);
+  const [countryDrillCode, setCountryDrillCode] = useState<string | null>(null);
+  const [countryDrillLoading, setCountryDrillLoading] = useState(false);
   const navigate = useNavigate();
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -170,6 +174,18 @@ function Dashboard() {
     void load();
     toast.success("Refreshing…");
   };
+
+  const openCountry = (cc: string) => {
+    if (!cc || cc.length !== 2) return;
+    setCountryDrillCode(cc);
+    setCountryDrill(null);
+    setCountryDrillLoading(true);
+    void fetchCountry({ data: { country: cc, days: rangeDays, linkId: null } })
+      .then((res) => setCountryDrill(res))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Failed to load country data"))
+      .finally(() => setCountryDrillLoading(false));
+  };
+
 
   const rangeDays = range === "day" ? 1 : range === "week" ? 7 : 30;
   const goToLinkAnalytics = (id: string) => {
@@ -627,18 +643,27 @@ function Dashboard() {
                         const pct = (row.total / max) * 100;
                         const share = rangeTotals.total ? (row.total / rangeTotals.total) * 100 : 0;
                         return (
-                          <div key={row.key} className="space-y-1">
+                          <button
+                            key={row.key}
+                            type="button"
+                            onClick={() => openCountry(row.key)}
+                            className="group w-full space-y-1 rounded-lg p-1.5 -m-1.5 text-left transition-colors hover:bg-accent/30 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                            title={`View ${row.key} drilldown`}
+                          >
                             <div className="flex items-center justify-between text-xs gap-2">
                               <span className="flex items-center gap-2 min-w-0">
                                 <span className="text-base leading-none">{flag(row.key)}</span>
                                 <span className="font-semibold uppercase tracking-wide">{row.key}</span>
                               </span>
-                              <span className="font-mono text-muted-foreground">{share.toFixed(0)}%</span>
+                              <span className="flex items-center gap-1.5 font-mono text-muted-foreground">
+                                {share.toFixed(0)}%
+                                <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+                              </span>
                             </div>
                             <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                              <div className="h-full rounded-full bg-gradient-to-r from-[oklch(0.75_0.16_215)] to-[oklch(0.55_0.20_245)]" style={{ width: `${pct}%` }} />
+                              <div className="h-full rounded-full bg-gradient-to-r from-[oklch(0.75_0.16_215)] to-[oklch(0.55_0.20_245)] transition-all group-hover:from-[oklch(0.70_0.18_215)] group-hover:to-[oklch(0.50_0.22_245)]" style={{ width: `${pct}%` }} />
                             </div>
-                          </div>
+                          </button>
                         );
                       });
                     })()}
@@ -1086,6 +1111,146 @@ function Dashboard() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Country drilldown dialog */}
+      <Dialog open={!!countryDrillCode} onOpenChange={(o) => { if (!o) { setCountryDrillCode(null); setCountryDrill(null); } }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              {countryDrillCode && (() => {
+                const up = countryDrillCode.toUpperCase();
+                const A = 0x1f1e6;
+                let f = "🌐";
+                try { f = String.fromCodePoint(A + up.charCodeAt(0) - 65, A + up.charCodeAt(1) - 65); } catch {}
+                return <><span className="text-2xl leading-none">{f}</span><span>{up} · Country drilldown</span></>;
+              })()}
+            </DialogTitle>
+            <DialogDescription>
+              Devices, browsers & CTR for traffic from this country · {rangeLabel}
+            </DialogDescription>
+          </DialogHeader>
+
+          {countryDrillLoading || !countryDrill ? (
+            <div className="space-y-3 py-6">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-10 animate-pulse rounded bg-secondary/60" />
+              ))}
+            </div>
+          ) : countryDrill.totals.total === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">No data for this country in selected range.</p>
+          ) : (
+            <div className="space-y-5 max-h-[70vh] overflow-y-auto -mx-2 px-2">
+              {/* Totals strip */}
+              <div className="grid grid-cols-4 gap-2">
+                <div className="rounded-lg border border-border bg-card-gradient px-3 py-2.5">
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Clicks</div>
+                  <div className="mt-0.5 font-display text-lg font-bold">{countryDrill.totals.total.toLocaleString()}</div>
+                </div>
+                <div className="rounded-lg border border-border bg-card-gradient px-3 py-2.5">
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Humans</div>
+                  <div className="mt-0.5 font-display text-lg font-bold text-success">{countryDrill.totals.humans.toLocaleString()}</div>
+                </div>
+                <div className="rounded-lg border border-border bg-card-gradient px-3 py-2.5">
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Bots</div>
+                  <div className="mt-0.5 font-display text-lg font-bold text-destructive">{countryDrill.totals.bots.toLocaleString()}</div>
+                </div>
+                <div className="rounded-lg border border-border bg-card-gradient px-3 py-2.5">
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">CTR</div>
+                  <div className="mt-0.5 font-display text-lg font-bold text-primary">{(countryDrill.totals.ctr * 100).toFixed(1)}%</div>
+                </div>
+              </div>
+
+              {/* Device + Browser side by side */}
+              <div className="grid gap-4 md:grid-cols-2">
+                {[
+                  { title: "By Device", rows: countryDrill.byDevice },
+                  { title: "By Browser", rows: countryDrill.byBrowser },
+                ].map((block) => {
+                  const max = Math.max(1, ...block.rows.map((r) => r.total));
+                  return (
+                    <div key={block.title} className="rounded-xl border border-border bg-card-gradient p-4">
+                      <h4 className="font-display text-sm font-semibold">{block.title}</h4>
+                      <div className="mt-3 space-y-2.5">
+                        {block.rows.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No data</p>
+                        ) : block.rows.map((r) => {
+                          const Icon = getBrandIcon(r.key);
+                          const pct = (r.total / max) * 100;
+                          const ctr = r.total ? (r.humans / r.total) * 100 : 0;
+                          return (
+                            <div key={r.key} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs gap-2">
+                                <span className="flex items-center gap-1.5 min-w-0">
+                                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate font-medium">{prettyLabel(r.key)}</span>
+                                </span>
+                                <span className="font-mono text-muted-foreground shrink-0">
+                                  {r.total} · <span className="text-success">{ctr.toFixed(0)}%</span>
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                                <div className="h-full rounded-full bg-gradient-to-r from-[oklch(0.75_0.16_215)] to-[oklch(0.55_0.20_245)]" style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* By OS */}
+              <div className="rounded-xl border border-border bg-card-gradient p-4">
+                <h4 className="font-display text-sm font-semibold">By Operating System</h4>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {countryDrill.byOS.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No data</p>
+                  ) : countryDrill.byOS.map((r) => {
+                    const Icon = getBrandIcon(r.key);
+                    const ctr = r.total ? (r.humans / r.total) * 100 : 0;
+                    return (
+                      <div key={r.key} className="flex items-center justify-between rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-xs">
+                        <span className="flex items-center gap-2"><Icon className="h-3.5 w-3.5" /> <span className="font-medium">{prettyLabel(r.key)}</span></span>
+                        <span className="font-mono text-muted-foreground">{r.total} · <span className="text-success">{ctr.toFixed(0)}%</span></span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Top links from this country */}
+              {countryDrill.byLink.length > 0 && (
+                <div className="rounded-xl border border-border bg-card-gradient p-4">
+                  <h4 className="font-display text-sm font-semibold">Top Links from this Country</h4>
+                  <div className="mt-3 space-y-1.5">
+                    {countryDrill.byLink.map((l) => (
+                      <button
+                        key={l.id}
+                        onClick={() => { setCountryDrillCode(null); goToLinkAnalytics(l.id); }}
+                        className="w-full rounded-lg border border-border/60 bg-background/40 p-2.5 text-left transition-colors hover:border-primary/40 hover:bg-accent/30"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-primary">/r/{l.short_code}</span>
+                            {l.title && <span className="ml-2 text-xs font-medium truncate">{l.title}</span>}
+                          </div>
+                          <div className="flex items-center gap-3 text-[11px] font-mono">
+                            <span className="text-success">{l.humans}</span>
+                            <span className="text-destructive">{l.bots}</span>
+                            <span className="text-primary">{(l.conversion * 100).toFixed(0)}%</span>
+                            <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </SidebarProvider>
