@@ -744,9 +744,10 @@ export const verifyHuman = createServerFn({ method: "POST" })
       }
     }
 
-    // Re-check protection + targeting at verification time
+    // Re-check protection + targeting at verification time (parallel)
     const cfg = await loadProtection();
     const rateHits = await ipExceedsRate(ip, cfg);
+
 
     const uaInfo2 = parseUA(a.ua);
     const country = getRequestHeader("cf-ipcountry") || null;
