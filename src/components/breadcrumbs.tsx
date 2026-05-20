@@ -69,7 +69,7 @@ export function buildBreadcrumbSchema(items: BreadcrumbItem[]) {
       "@type": "ListItem",
       position: idx + 1,
       name: item.label,
-      ...(item.to ? { item: `${BASE_URL}${item.to}` } : {}),
+      item: `${getBaseUrl()}${item.to}`,
     })),
   };
 }
