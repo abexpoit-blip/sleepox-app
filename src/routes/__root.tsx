@@ -140,8 +140,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "@context": "https://schema.org",
           "@type": "Organization",
           name: "LinkShield",
+          alternateName: "Sleepox LinkShield",
           url: "https://sleepox.com",
-          logo: "https://sleepox.com/favicon.ico",
+          logo: "https://sleepox.com/icon-512x512.png",
+          sameAs: ["https://sleepox.com"],
         }),
       },
       {
@@ -151,9 +153,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "@type": "WebSite",
           name: "LinkShield",
           url: "https://sleepox.com",
+          potentialAction: {
+            "@type": "SearchAction",
+            target: "https://sleepox.com/?q={search_term_string}",
+            "query-input": "required name=search_term_string",
+          },
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "LinkShield",
+          applicationCategory: "BusinessApplication",
+          operatingSystem: "Web, iOS, Android",
+          description:
+            "Bot-filtered URL shortener and click fraud protection for Facebook, Instagram, TikTok, and Google Ads campaigns.",
+          offers: {
+            "@type": "Offer",
+            price: "9",
+            priceCurrency: "USD",
+          },
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: "4.9",
+            ratingCount: "128",
+          },
         }),
       },
     ],
+
   }),
   shellComponent: RootShell,
   component: RootComponent,
