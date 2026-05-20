@@ -98,17 +98,6 @@ export const getLinkMonitor = createServerFn({ method: "POST" })
       .map(([reason, count]) => ({ reason, count, pct: bots ? count / bots : 0 }))
       .sort((a, b) => b.count - a.count);
 
-    const bucket = (key: (c: Click) => string | null) => {
-      const m = new Map<string, { total: number; humans: number; bots: number }>();
-      for (const c of clicks) {
-        const k = key(c) ?? "unknown";
-        const e = m.get(k) ?? { total: 0, humans: 0, bots: 0 };
-        e.total += 1;
-        if (c.is_bot) e.bots += 1; else e.humans += 1;
-        m.set(k, e);
-      }
-      return [...m.entries()].map(([k, v]) => ({ key: k, ...v })).sort((a, b) => b.total - a.total);
-    };
 
     // Per-source funnel: impressions (initial pageload) → real clicks (verified humans) → conversions (redirect to destination)
     // In our model each visit logs:
