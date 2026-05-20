@@ -108,12 +108,13 @@ function BlogPostPage() {
       <BlogHeader />
 
       <article className="mx-auto max-w-3xl px-6 py-12 md:py-16">
-        <Link
-          to="/blog"
-          className="mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" /> All posts
-        </Link>
+        <Breadcrumbs
+          items={[
+            { label: "Blog", to: "/blog" },
+            { label: post.title },
+          ]}
+          className="mb-8"
+        />
 
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
           {post.category}
