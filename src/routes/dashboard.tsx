@@ -656,10 +656,6 @@ function Dashboard() {
                   </div>
                   <div className="p-5 space-y-3">
                     {(() => {
-                      const flagUrl = (cc: string) =>
-                        cc && /^[A-Za-z]{2}$/.test(cc)
-                          ? `https://flagcdn.com/w40/${cc.toLowerCase()}.png`
-                          : null;
                       const rows = (analytics?.byCountry ?? [])
                         .filter((r) => r.key && r.key !== "unknown")
                         .slice(0, 6);
@@ -675,33 +671,23 @@ function Dashboard() {
                       return rows.map((row) => {
                         const pct = (row.total / max) * 100;
                         const share = rangeTotals.total ? (row.total / rangeTotals.total) * 100 : 0;
-                        const url = flagUrl(row.key);
+                        const cc = (row.key || "").toUpperCase();
+                        const name = COUNTRY_NAMES[cc];
                         return (
                           <button
                             key={row.key}
                             type="button"
                             onClick={() => openCountry(row.key)}
                             className="group w-full space-y-1 rounded-lg p-1.5 -m-1.5 text-left transition-colors hover:bg-accent/30 focus:outline-none focus:ring-2 focus:ring-primary/40"
-                            title={`View ${row.key} drilldown`}
+                            title={`View ${name ?? cc} drilldown`}
                           >
                             <div className="flex items-center justify-between text-xs gap-2">
                               <span className="flex items-center gap-2 min-w-0">
-                                {url ? (
-                                  <img
-                                    src={url}
-                                    srcSet={`https://flagcdn.com/w80/${row.key.toLowerCase()}.png 2x`}
-                                    alt={row.key}
-                                    width={20}
-                                    height={15}
-                                    loading="lazy"
-                                    className="h-[15px] w-5 rounded-sm object-cover ring-1 ring-border/60 shadow-sm shrink-0"
-                                  />
-                                ) : (
-                                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-                                )}
-                                <span className="font-mono font-semibold uppercase tracking-wider">{row.key}</span>
+                                <CountryFlag cc={cc} />
+                                <span className="font-mono font-semibold uppercase tracking-wider">{cc}</span>
+                                {name && <span className="truncate text-muted-foreground">{name}</span>}
                               </span>
-                              <span className="flex items-center gap-1.5 font-mono text-muted-foreground">
+                              <span className="flex items-center gap-1.5 font-mono text-muted-foreground shrink-0">
                                 {share.toFixed(0)}%
                                 <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
                               </span>
