@@ -39,7 +39,8 @@ export const getAnalytics = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => RangeSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const since = new Date(Date.now() - data.days * 24 * 3600 * 1000).toISOString();
+    const sinceDate = new Date(Date.now() - data.days * 24 * 3600 * 1000);
+    const since = sinceDate.toISOString();
 
     // Get user's links first (RLS scoped)
     let linksQ = supabase.from("links").select("id, short_code, title, destination_url, clicks_count, bot_clicks_count");
@@ -62,6 +63,58 @@ export const getAnalytics = createServerFn({ method: "POST" })
       };
     }
 
+    // ACCURATE counts: server-side aggregate (not bounded by row-fetch limit).
+    // Returns per-link, per-day humans/bots; RLS-scoped to clicks the caller can see.
+    type AggRow = { link_id: string; day: string; humans: number; bots: number };
+    const { data: aggRaw } = await supabase.rpc("clicks_daily", {
+      p_since: since,
+      p_link_id: data.linkId ?? null,
+    });
+    const agg = (aggRaw ?? []) as AggRow[];
+
+    // Per-link totals from aggregate
+    const perLinkAgg = new Map<string, { humans: number; bots: number }>();
+    for (const r of agg) {
+      const e = perLinkAgg.get(r.link_id) ?? { humans: 0, bots: 0 };
+      e.humans += Number(r.humans) || 0;
+      e.bots += Number(r.bots) || 0;
+      perLinkAgg.set(r.link_id, e);
+    }
+
+    let humans = 0, bots = 0;
+    for (const v of perLinkAgg.values()) { humans += v.humans; bots += v.bots; }
+    const total = humans + bots;
+    const conversionRate = total ? humans / total : 0;
+
+    // Timeseries (day buckets) from aggregate
+    const tsMap = new Map<string, { date: string; humans: number; bots: number }>();
+    for (let i = data.days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      tsMap.set(d, { date: d, humans: 0, bots: 0 });
+    }
+    for (const r of agg) {
+      const e = tsMap.get(r.day);
+      if (e) { e.humans += Number(r.humans) || 0; e.bots += Number(r.bots) || 0; }
+    }
+
+    // Per-link conversion (totals from aggregate; sorted by total desc)
+    const byLink = (links ?? []).map((l) => {
+      const a = perLinkAgg.get(l.id) ?? { humans: 0, bots: 0 };
+      const lTotal = a.humans + a.bots;
+      return {
+        id: l.id,
+        short_code: l.short_code,
+        title: l.title,
+        destination_url: l.destination_url,
+        total: lTotal,
+        humans: a.humans,
+        bots: a.bots,
+        conversion: lTotal ? a.humans / lTotal : 0,
+      };
+    }).sort((a, b) => b.total - a.total);
+
+    // Sample of recent rows for breakdowns (country/device/browser/os/variant/reasons/referrers).
+    // These are best-effort top-N from up to 10k recent rows — totals above are still accurate.
     const { data: clicksRaw } = await supabase
       .from("clicks")
       .select("link_id,is_bot,country,device,os,browser,variant,bot_reason,referer,created_at")
@@ -69,30 +122,13 @@ export const getAnalytics = createServerFn({ method: "POST" })
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(10000);
-
     const clicks = (clicksRaw ?? []) as Click[];
-    const total = clicks.length;
-    const bots = clicks.filter((c) => c.is_bot).length;
-    const humans = total - bots;
-    const conversionRate = total ? humans / total : 0;
-
-    // Timeseries (day buckets)
-    const tsMap = new Map<string, { date: string; humans: number; bots: number }>();
-    for (let i = data.days - 1; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
-      tsMap.set(d, { date: d, humans: 0, bots: 0 });
-    }
-    for (const c of clicks) {
-      const d = c.created_at.slice(0, 10);
-      const e = tsMap.get(d);
-      if (e) { if (c.is_bot) e.bots += 1; else e.humans += 1; }
-    }
 
     // Top reject reasons (split comma-separated reason strings)
     const reasonMap = new Map<string, number>();
     for (const c of clicks) {
       if (!c.is_bot || !c.bot_reason) continue;
-      const cleaned = c.bot_reason.split("|")[0]; // strip "verify:" prefix metadata
+      const cleaned = c.bot_reason.split("|")[0];
       const parts = cleaned.replace(/^verify:/, "").split(",").filter(Boolean);
       for (const p of parts) {
         const tag = p.split(":")[0].trim();
@@ -104,24 +140,6 @@ export const getAnalytics = createServerFn({ method: "POST" })
       .map(([reason, count]) => ({ reason, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 12);
-
-    // Per-link conversion
-    const byLink = (links ?? []).map((l) => {
-      const linkClicks = clicks.filter((c) => c.link_id === l.id);
-      const lTotal = linkClicks.length;
-      const lBots = linkClicks.filter((c) => c.is_bot).length;
-      const lHumans = lTotal - lBots;
-      return {
-        id: l.id,
-        short_code: l.short_code,
-        title: l.title,
-        destination_url: l.destination_url,
-        total: lTotal,
-        humans: lHumans,
-        bots: lBots,
-        conversion: lTotal ? lHumans / lTotal : 0,
-      };
-    }).sort((a, b) => b.total - a.total);
 
     // Referrer hosts
     const refMap = new Map<string, number>();
