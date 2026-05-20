@@ -178,7 +178,7 @@ export const getCountryDrilldown = createServerFn({ method: "POST" })
       return {
         country: data.country,
         totals: { total: 0, humans: 0, bots: 0, ctr: 0 },
-        byDevice: [], byBrowser: [], byOS: [], byLink: [], timeseries: [],
+        byDevice: [], byBrowser: [], byOS: [], byReferrer: [], byLink: [], timeseries: [],
         options: { devices: [], browsers: [], os: [] },
         appliedFilters: { device: data.device ?? null, browser: data.browser ?? null, os: data.os ?? null },
       };
@@ -186,13 +186,13 @@ export const getCountryDrilldown = createServerFn({ method: "POST" })
 
     const { data: clicksRaw } = await supabase
       .from("clicks")
-      .select("link_id,is_bot,device,os,browser,created_at")
+      .select("link_id,is_bot,device,os,browser,referer,created_at")
       .in("link_id", linkIds)
       .eq("country", data.country.toUpperCase())
       .gte("created_at", since)
       .limit(10000);
 
-    const allClicks = (clicksRaw ?? []) as Click[];
+    const allClicks = (clicksRaw ?? []) as (Click & { referer?: string | null })[];
 
     // Build filter option lists from unfiltered set (for dropdowns)
     const options = {
@@ -242,12 +242,35 @@ export const getCountryDrilldown = createServerFn({ method: "POST" })
       .sort((a, b) => b.total - a.total)
       .slice(0, 8);
 
+    // Referrer hosts within this country
+    const refMap = new Map<string, { total: number; humans: number; bots: number }>();
+    const incRef = (host: string, isBot: boolean) => {
+      const e = refMap.get(host) ?? { total: 0, humans: 0, bots: 0 };
+      e.total += 1;
+      if (isBot) e.bots += 1; else e.humans += 1;
+      refMap.set(host, e);
+    };
+    for (const c of clicks) {
+      if (!c.referer) { incRef("direct", c.is_bot); continue; }
+      try {
+        const host = new URL(c.referer).hostname.replace(/^www\./, "");
+        incRef(host, c.is_bot);
+      } catch {
+        incRef("unknown", c.is_bot);
+      }
+    }
+    const byReferrer = [...refMap.entries()]
+      .map(([key, v]) => ({ key, total: v.total, humans: v.humans, bots: v.bots }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+
     return {
       country: data.country.toUpperCase(),
       totals: { total, humans, bots, ctr },
       byDevice: bucket(clicks, (c) => c.device),
       byBrowser: bucket(clicks, (c) => c.browser).slice(0, 8),
       byOS: bucket(clicks, (c) => c.os).slice(0, 8),
+      byReferrer,
       byLink,
       timeseries: [...tsMap.values()],
       options,

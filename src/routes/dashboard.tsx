@@ -50,7 +50,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { getAnalytics, getCountryDrilldown, getAdRejectDiagnostics } from "@/lib/analytics.functions";
-import { getBrandIcon, prettyLabel } from "@/components/brand-icons";
+import {
+  prettyLabel,
+  BrandBadge,
+  CountryFlag,
+  ReferrerFavicon,
+  COUNTRY_NAMES,
+  prettyReferrer,
+} from "@/components/brand-icons";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -621,19 +628,17 @@ function Dashboard() {
                         .filter((r) => (r.key ?? "").toLowerCase() !== "bot" && (r.key ?? "").toLowerCase() !== "unknown")
                         .slice(0, 6)
                         .map((row, i) => {
-                          const Icon = getBrandIcon(row.key);
                           const osRow = (analytics?.byOS ?? []).filter((r) => (r.key ?? "").toLowerCase() !== "bot" && (r.key ?? "").toLowerCase() !== "unknown")[i % Math.max(1, (analytics?.byOS?.length ?? 1))];
-                          const OsIcon = osRow ? getBrandIcon(osRow.key) : Activity;
                           const mins = i * 7 + 2;
                           return (
-                            <div key={row.key} className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-accent/20">
+                            <div key={row.key} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-accent/20">
                               <span className="font-mono text-[10px] text-muted-foreground w-10">
                                 {mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h`}
                               </span>
-                              <Icon className="h-4 w-4 shrink-0" />
+                              <BrandBadge name={row.key} />
                               <span className="text-sm font-medium flex-1 truncate">{prettyLabel(row.key)}</span>
-                              <OsIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                              <span className="text-[11px] text-muted-foreground w-16 text-right">{prettyLabel(osRow?.key ?? "—")}</span>
+                              {osRow ? <BrandBadge name={osRow.key} /> : <span className="h-5 w-5" />}
+                              <span className="text-[11px] text-muted-foreground w-16 text-right truncate">{prettyLabel(osRow?.key ?? "—")}</span>
                               <span className="font-mono text-xs font-semibold text-success w-12 text-right">{row.humans}</span>
                             </div>
                           );
@@ -650,10 +655,6 @@ function Dashboard() {
                   </div>
                   <div className="p-5 space-y-3">
                     {(() => {
-                      const flagUrl = (cc: string) =>
-                        cc && /^[A-Za-z]{2}$/.test(cc)
-                          ? `https://flagcdn.com/w40/${cc.toLowerCase()}.png`
-                          : null;
                       const rows = (analytics?.byCountry ?? [])
                         .filter((r) => r.key && r.key !== "unknown")
                         .slice(0, 6);
@@ -669,33 +670,23 @@ function Dashboard() {
                       return rows.map((row) => {
                         const pct = (row.total / max) * 100;
                         const share = rangeTotals.total ? (row.total / rangeTotals.total) * 100 : 0;
-                        const url = flagUrl(row.key);
+                        const cc = (row.key || "").toUpperCase();
+                        const name = COUNTRY_NAMES[cc];
                         return (
                           <button
                             key={row.key}
                             type="button"
                             onClick={() => openCountry(row.key)}
                             className="group w-full space-y-1 rounded-lg p-1.5 -m-1.5 text-left transition-colors hover:bg-accent/30 focus:outline-none focus:ring-2 focus:ring-primary/40"
-                            title={`View ${row.key} drilldown`}
+                            title={`View ${name ?? cc} drilldown`}
                           >
                             <div className="flex items-center justify-between text-xs gap-2">
                               <span className="flex items-center gap-2 min-w-0">
-                                {url ? (
-                                  <img
-                                    src={url}
-                                    srcSet={`https://flagcdn.com/w80/${row.key.toLowerCase()}.png 2x`}
-                                    alt={row.key}
-                                    width={20}
-                                    height={15}
-                                    loading="lazy"
-                                    className="h-[15px] w-5 rounded-sm object-cover ring-1 ring-border/60 shadow-sm shrink-0"
-                                  />
-                                ) : (
-                                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-                                )}
-                                <span className="font-mono font-semibold uppercase tracking-wider">{row.key}</span>
+                                <CountryFlag cc={cc} />
+                                <span className="font-mono font-semibold uppercase tracking-wider">{cc}</span>
+                                {name && <span className="truncate text-muted-foreground">{name}</span>}
                               </span>
-                              <span className="flex items-center gap-1.5 font-mono text-muted-foreground">
+                              <span className="flex items-center gap-1.5 font-mono text-muted-foreground shrink-0">
                                 {share.toFixed(0)}%
                                 <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
                               </span>
@@ -1314,13 +1305,17 @@ function Dashboard() {
       <Dialog open={!!countryDrillCode} onOpenChange={(o) => { if (!o) { setCountryDrillCode(null); setCountryDrill(null); setDrillFilters({ device: null, browser: null, os: null }); } }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="font-display flex items-center gap-2">
+            <DialogTitle className="font-display flex items-center gap-2.5">
               {countryDrillCode && (() => {
                 const up = countryDrillCode.toUpperCase();
-                const A = 0x1f1e6;
-                let f = "🌐";
-                try { f = String.fromCodePoint(A + up.charCodeAt(0) - 65, A + up.charCodeAt(1) - 65); } catch {}
-                return <><span className="text-2xl leading-none">{f}</span><span>{up} · Country drilldown</span></>;
+                const name = COUNTRY_NAMES[up];
+                return (
+                  <>
+                    <CountryFlag cc={up} className="h-6 w-8 !rounded-md" />
+                    <span>{up}{name ? ` · ${name}` : ""}</span>
+                    <span className="text-xs font-normal text-muted-foreground">· Country drilldown</span>
+                  </>
+                );
               })()}
             </DialogTitle>
             <DialogDescription>
@@ -1379,7 +1374,10 @@ function Dashboard() {
                         <SelectItem value="__all__">All {f.label}s</SelectItem>
                         {f.opts.map((o) => (
                           <SelectItem key={o.key} value={o.key}>
-                            {prettyLabel(o.key)} <span className="text-muted-foreground">({o.total})</span>
+                            <span className="inline-flex items-center gap-2">
+                              <BrandBadge name={o.key} />
+                              {prettyLabel(o.key)} <span className="text-muted-foreground">({o.total})</span>
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1419,14 +1417,13 @@ function Dashboard() {
                         {block.rows.length === 0 ? (
                           <p className="text-xs text-muted-foreground">No data</p>
                         ) : block.rows.map((r) => {
-                          const Icon = getBrandIcon(r.key);
                           const pct = (r.total / max) * 100;
                           const ctr = r.total ? (r.humans / r.total) * 100 : 0;
                           return (
                             <div key={r.key} className="space-y-1">
                               <div className="flex items-center justify-between text-xs gap-2">
-                                <span className="flex items-center gap-1.5 min-w-0">
-                                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                                <span className="flex items-center gap-2 min-w-0">
+                                  <BrandBadge name={r.key} />
                                   <span className="truncate font-medium">{prettyLabel(r.key)}</span>
                                 </span>
                                 <span className="font-mono text-muted-foreground shrink-0">
@@ -1452,17 +1449,53 @@ function Dashboard() {
                   {countryDrill.byOS.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No data</p>
                   ) : countryDrill.byOS.map((r) => {
-                    const Icon = getBrandIcon(r.key);
                     const ctr = r.total ? (r.humans / r.total) * 100 : 0;
                     return (
                       <div key={r.key} className="flex items-center justify-between rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-xs">
-                        <span className="flex items-center gap-2"><Icon className="h-3.5 w-3.5" /> <span className="font-medium">{prettyLabel(r.key)}</span></span>
-                        <span className="font-mono text-muted-foreground">{r.total} · <span className="text-success">{ctr.toFixed(0)}%</span></span>
+                        <span className="flex items-center gap-2 min-w-0">
+                          <BrandBadge name={r.key} />
+                          <span className="truncate font-medium">{prettyLabel(r.key)}</span>
+                        </span>
+                        <span className="font-mono text-muted-foreground shrink-0">{r.total} · <span className="text-success">{ctr.toFixed(0)}%</span></span>
                       </div>
                     );
                   })}
                 </div>
               </div>
+
+              {/* By Referrer */}
+              {(countryDrill.byReferrer?.length ?? 0) > 0 && (
+                <div className="rounded-xl border border-border bg-card-gradient p-4">
+                  <h4 className="font-display text-sm font-semibold flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-primary" /> Top Referrers
+                  </h4>
+                  <div className="mt-3 space-y-2.5">
+                    {(() => {
+                      const refMax = Math.max(1, ...countryDrill.byReferrer.map((r) => r.total));
+                      return countryDrill.byReferrer.map((r) => {
+                        const pct = (r.total / refMax) * 100;
+                        const ctr = r.total ? (r.humans / r.total) * 100 : 0;
+                        return (
+                          <div key={r.key} className="space-y-1">
+                            <div className="flex items-center justify-between text-xs gap-2">
+                              <span className="flex items-center gap-2 min-w-0">
+                                <ReferrerFavicon host={r.key} />
+                                <span className="truncate font-medium">{prettyReferrer(r.key)}</span>
+                              </span>
+                              <span className="font-mono text-muted-foreground shrink-0">
+                                {r.total} · <span className="text-success">{ctr.toFixed(0)}%</span>
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                              <div className="h-full rounded-full bg-gradient-to-r from-[oklch(0.75_0.16_215)] to-[oklch(0.55_0.20_245)]" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              )}
 
               {/* Top links from this country */}
               {countryDrill.byLink.length > 0 && (
