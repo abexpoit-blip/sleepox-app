@@ -304,6 +304,15 @@ function Dashboard() {
     [links],
   );
 
+  // Range-windowed per-link stats from the same source the link analytics page uses,
+  // so dashboard rows match /analytics/$linkId exactly (instead of lifetime cached counters).
+  const linkStatsById = useMemo(() => {
+    const m = new Map<string, { humans: number; bots: number }>();
+    for (const b of analytics?.byLink ?? []) m.set(b.id, { humans: b.humans, bots: b.bots });
+    return m;
+  }, [analytics]);
+  const getLinkStats = (id: string) => linkStatsById.get(id) ?? { humans: 0, bots: 0 };
+
   const chartValues = useMemo(
     () => (analytics?.timeseries ?? []).map((p) => p.humans),
     [analytics],
@@ -1110,8 +1119,9 @@ function Dashboard() {
                 ) : (
                   <div className="divide-y divide-border/60">
                     {filtered.map((l) => {
-                      const total = l.clicks_count + l.bot_clicks_count;
-                      const cleanPct = total > 0 ? (l.clicks_count / total) * 100 : 100;
+                      const s = getLinkStats(l.id);
+                      const total = s.humans + s.bots;
+                      const cleanPct = total > 0 ? (s.humans / total) * 100 : 100;
                       return (
                         <div
                           key={l.id}
@@ -1163,7 +1173,7 @@ function Dashboard() {
                                 Real
                               </div>
                               <div className="font-mono text-sm font-bold text-success">
-                                {l.clicks_count}
+                                {s.humans}
                               </div>
                             </div>
                             <div className="text-right">
@@ -1171,7 +1181,7 @@ function Dashboard() {
                                 Bots
                               </div>
                               <div className="font-mono text-sm font-bold text-destructive">
-                                {l.bot_clicks_count}
+                                {s.bots}
                               </div>
                             </div>
                           </div>
@@ -1255,8 +1265,9 @@ function Dashboard() {
             ) : (
               <div className="space-y-1.5">
                 {links.map((l) => {
-                  const total = l.clicks_count + l.bot_clicks_count;
-                  const cleanPct = total > 0 ? (l.clicks_count / total) * 100 : 100;
+                  const s = getLinkStats(l.id);
+                  const total = s.humans + s.bots;
+                  const cleanPct = total > 0 ? (s.humans / total) * 100 : 100;
                   return (
                     <button
                       key={l.id}
@@ -1279,11 +1290,11 @@ function Dashboard() {
                         <div className="flex items-center gap-4 text-right">
                           <div>
                             <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Real</div>
-                            <div className="font-mono text-sm font-bold text-success">{l.clicks_count}</div>
+                            <div className="font-mono text-sm font-bold text-success">{s.humans}</div>
                           </div>
                           <div>
                             <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Bots</div>
-                            <div className="font-mono text-sm font-bold text-destructive">{l.bot_clicks_count}</div>
+                            <div className="font-mono text-sm font-bold text-destructive">{s.bots}</div>
                           </div>
                           <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
                         </div>
