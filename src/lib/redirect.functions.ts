@@ -749,11 +749,21 @@ export const verifyHuman = createServerFn({ method: "POST" })
       getRequestHeader("x-forwarded-for") ||
       "";
 
-    const { data: link } = await supabaseAdmin
+    const { data: link, error: linkError } = await supabaseAdmin
       .from("links")
       .select("id, destination_url, status, targeting, duplicate_protection, duplicate_window_minutes")
       .eq("short_code", data.code)
       .maybeSingle();
+
+    if (linkError) {
+      console.error("[redirect] verify lookup failed", {
+        code: data.code,
+        message: linkError.message,
+        details: linkError.details,
+        hint: linkError.hint,
+      });
+      throw new Error(`Redirect verify lookup failed: ${linkError.message}`);
+    }
 
     if (!link || link.status !== "active") {
       return { ok: false as const, reason: "not-found" };
