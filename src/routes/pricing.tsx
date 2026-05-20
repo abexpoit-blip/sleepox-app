@@ -14,6 +14,12 @@ export const Route = createFileRoute("/pricing")({
       { property: "og:url", content: "https://sleepox.com/pricing" },
     ],
     links: [{ rel: "canonical", href: "https://sleepox.com/pricing" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(buildFaqSchema(PRICING_FAQ)),
+      },
+    ],
   }),
 
   component: PricingPage,
