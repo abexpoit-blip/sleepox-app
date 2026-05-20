@@ -131,10 +131,15 @@ function PreLanderPage() {
   }
 
   const variant = loaderData.variant!;
-  // silentBot: render the same real article a human would see, but do NOT
-  // auto-verify or expose the destination. Looks like a legit page to FB
-  // ad-review crawlers — no "Article unavailable" giveaway.
-  return <PreLanderInner code={code} variant={variant} silent={Boolean(loaderData.silentBot)} />;
+  const branding = "branding" in loaderData ? loaderData.branding : null;
+  return (
+    <PreLanderInner
+      code={code}
+      variant={variant}
+      silent={Boolean(loaderData.silentBot)}
+      branding={branding}
+    />
+  );
 }
 
 function DirectRedirect({ destination }: { destination: string }) {
@@ -149,7 +154,24 @@ function DirectRedirect({ destination }: { destination: string }) {
   );
 }
 
-function PreLanderInner({ code, variant, silent }: { code: string; variant: Variant; silent: boolean }) {
+type Branding = {
+  logoUrl: string | null;
+  brandName: string | null;
+  tagline: string | null;
+  color: string | null;
+} | null;
+
+function PreLanderInner({
+  code,
+  variant,
+  silent,
+  branding,
+}: {
+  code: string;
+  variant: Variant;
+  silent: boolean;
+  branding: Branding;
+}) {
   const verify = useServerFn(verifyHuman);
   const [status, setStatus] = useState<"verifying" | "redirecting" | "blocked">("verifying");
   const metrics = useRef({ mouse: 0, scroll: 0, key: 0, touch: 0, startedAt: Date.now() });
@@ -199,11 +221,39 @@ function PreLanderInner({ code, variant, silent }: { code: string; variant: Vari
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [silent]);
 
+  const brandName = branding?.brandName || "Daily Reads";
+  const tagline = branding?.tagline || "Wellness & lifestyle articles for everyday readers.";
+  const brandColor = branding?.color || null;
+  const logoUrl = branding?.logoUrl || null;
+  const accentStyle = brandColor
+    ? ({ ["--brand-accent" as string]: brandColor } as React.CSSProperties)
+    : undefined;
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground" style={accentStyle}>
       <header className="border-b border-border">
         <div className="mx-auto max-w-3xl px-6 py-5 flex items-center justify-between">
-          <span className="font-bold tracking-tight text-lg">Daily Reads</span>
+          <div className="flex items-center gap-3">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={brandName}
+                className="h-9 w-9 rounded-lg object-cover border border-border"
+                loading="eager"
+              />
+            ) : null}
+            <div className="leading-tight">
+              <span
+                className="font-bold tracking-tight text-lg block"
+                style={brandColor ? { color: brandColor } : undefined}
+              >
+                {brandName}
+              </span>
+              {branding?.tagline ? (
+                <span className="text-[11px] text-muted-foreground">{branding.tagline}</span>
+              ) : null}
+            </div>
+          </div>
           <nav className="text-sm text-muted-foreground space-x-4 hidden sm:block">
             <span>Wellness</span><span>Lifestyle</span><span>Productivity</span>
           </nav>
@@ -212,7 +262,12 @@ function PreLanderInner({ code, variant, silent }: { code: string; variant: Vari
 
       <main className="mx-auto max-w-3xl px-6 py-10">
         <article className="max-w-none">
-          <p className="text-sm uppercase tracking-wider text-primary mb-3">{variant.category}</p>
+          <p
+            className="text-sm uppercase tracking-wider mb-3"
+            style={{ color: brandColor || "var(--color-primary)" }}
+          >
+            {variant.category}
+          </p>
           <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-4">
             {variant.title}
           </h1>
