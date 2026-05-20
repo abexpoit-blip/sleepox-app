@@ -31,6 +31,7 @@ import {
   Clock,
   Stethoscope,
   CheckCircle,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
