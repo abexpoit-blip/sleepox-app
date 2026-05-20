@@ -22,6 +22,10 @@ export const Route = createFileRoute("/pricing")({
         type: "application/ld+json",
         children: JSON.stringify(buildFaqSchema(PRICING_FAQ)),
       },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(buildBreadcrumbSchema(PRICING_CRUMBS)),
+      },
     ],
   }),
 
