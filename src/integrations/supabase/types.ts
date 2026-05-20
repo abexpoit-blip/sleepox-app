@@ -887,6 +887,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clicks_daily: {
+        Args: { p_link_id?: string; p_since: string }
+        Returns: {
+          bots: number
+          day: string
+          humans: number
+          link_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
