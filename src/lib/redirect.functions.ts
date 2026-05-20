@@ -441,13 +441,16 @@ export const resolveLink = createServerFn({ method: "POST" })
     const country = getRequestHeader("cf-ipcountry") || null;
     const referer = getRequestHeader("referer") || "";
 
-    const cfg = await loadProtection();
-
-    const { data: link } = await supabaseAdmin
-      .from("links")
-      .select("id, status, targeting, destination_url, duplicate_protection, duplicate_window_minutes")
-      .eq("short_code", data.code)
-      .maybeSingle();
+    // Parallel: protection config + link lookup are independent
+    const [cfg, linkRes] = await Promise.all([
+      loadProtection(),
+      supabaseAdmin
+        .from("links")
+        .select("id, status, targeting, destination_url, duplicate_protection, duplicate_window_minutes")
+        .eq("short_code", data.code)
+        .maybeSingle(),
+    ]);
+    const link = linkRes.data;
 
     if (!link || link.status !== "active") return { found: false as const };
 
