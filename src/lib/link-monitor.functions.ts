@@ -42,6 +42,36 @@ export const getLinkMonitor = createServerFn({ method: "POST" })
     if (!link) throw new Error("Link not found");
     if (link.user_id !== userId) throw new Error("Forbidden");
 
+    // ACCURATE totals + day-wise series via SQL aggregate (avoids 10k row-fetch truncation).
+    type AggRow = { link_id: string; day: string; humans: number; bots: number };
+    const { data: aggRaw } = await supabase.rpc("clicks_daily", {
+      p_since: since,
+      p_link_id: data.linkId,
+    });
+    const agg = (aggRaw ?? []) as AggRow[];
+
+    let humans = 0, bots = 0;
+    for (const r of agg) { humans += Number(r.humans) || 0; bots += Number(r.bots) || 0; }
+    const impressions = humans + bots;
+    const botRate = impressions ? bots / impressions : 0;
+    const conversionRate = impressions ? humans / impressions : 0;
+
+    // Timeseries from aggregate
+    const tsMap = new Map<string, { date: string; impressions: number; humans: number; bots: number }>();
+    for (let i = data.days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      tsMap.set(d, { date: d, impressions: 0, humans: 0, bots: 0 });
+    }
+    for (const r of agg) {
+      const e = tsMap.get(r.day);
+      if (e) {
+        const h = Number(r.humans) || 0;
+        const b = Number(r.bots) || 0;
+        e.humans += h; e.bots += b; e.impressions += h + b;
+      }
+    }
+
+    // Sample rows for breakdowns / recent list (best-effort top-N from up to 10k recent rows).
     const { data: clicksRaw } = await supabase
       .from("clicks")
       .select("is_bot,bot_reason,variant,country,device,browser,os,referer,ip_address,user_agent,created_at,utm_source,utm_medium,utm_campaign,utm_term,utm_content,referer_host")
@@ -49,31 +79,10 @@ export const getLinkMonitor = createServerFn({ method: "POST" })
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(10000);
-
     const clicks = (clicksRaw ?? []) as Click[];
-    const impressions = clicks.length;
-    const bots = clicks.filter((c) => c.is_bot).length;
-    const humans = impressions - bots;
-    const botRate = impressions ? bots / impressions : 0;
-    const conversionRate = impressions ? humans / impressions : 0;
 
-    // Unique IPs (humans only)
+    // Unique IPs (humans only) from sample
     const uniqHumanIps = new Set(clicks.filter((c) => !c.is_bot && c.ip_address).map((c) => c.ip_address!)).size;
-
-    // Timeseries
-    const tsMap = new Map<string, { date: string; impressions: number; humans: number; bots: number }>();
-    for (let i = data.days - 1; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
-      tsMap.set(d, { date: d, impressions: 0, humans: 0, bots: 0 });
-    }
-    for (const c of clicks) {
-      const d = c.created_at.slice(0, 10);
-      const e = tsMap.get(d);
-      if (e) {
-        e.impressions += 1;
-        if (c.is_bot) e.bots += 1; else e.humans += 1;
-      }
-    }
 
     // Rejection reasons
     const reasonMap = new Map<string, number>();
