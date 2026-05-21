@@ -15,6 +15,7 @@ import {
   CreditCard,
   Rocket,
   LayoutGrid,
+  Activity,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import {
@@ -50,6 +51,7 @@ const adminNav = [
   { title: "Domain Pool", url: "/admin/domains", icon: Globe2 },
   { title: "Members", url: "/admin/users", icon: Users },
   { title: "Audit Logs", url: "/admin/audit", icon: ScrollText },
+  { title: "Recent Clicks", url: "/admin/clicks", icon: Activity },
 ];
 
 export function AppSidebar({ email, isAdmin = false }: { email?: string; isAdmin?: boolean }) {
