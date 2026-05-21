@@ -638,35 +638,44 @@ export type Database = {
       }
       packages: {
         Row: {
+          billing_period: string
+          click_limit: number | null
           created_at: string
           features: Json
           id: string
           is_active: boolean
-          link_limit: number
+          link_limit: number | null
           name: string
           price_monthly: number
+          price_onetime: number
           slug: string
           sort_order: number
         }
         Insert: {
+          billing_period?: string
+          click_limit?: number | null
           created_at?: string
           features?: Json
           id?: string
           is_active?: boolean
-          link_limit?: number
+          link_limit?: number | null
           name: string
           price_monthly?: number
+          price_onetime?: number
           slug: string
           sort_order?: number
         }
         Update: {
+          billing_period?: string
+          click_limit?: number | null
           created_at?: string
           features?: Json
           id?: string
           is_active?: boolean
-          link_limit?: number
+          link_limit?: number | null
           name?: string
           price_monthly?: number
+          price_onetime?: number
           slug?: string
           sort_order?: number
         }
