@@ -59,7 +59,7 @@ export const Route = createFileRoute("/api/public/plisio-webhook")({
         // Find the matching upgrade_request
         const { data: req, error: reqErr } = await (supabaseAdmin as any)
           .from("upgrade_requests")
-          .select("id,user_id,package_slug,status")
+          .select("id,user_id,package_slug,status,plisio_status")
           .or(`plisio_invoice_id.eq.${txnId},transaction_ref.eq.${orderNumber}`)
           .order("created_at", { ascending: false })
           .limit(1)
@@ -70,6 +70,14 @@ export const Route = createFileRoute("/api/public/plisio-webhook")({
           return new Response("ok", { status: 200 }); // Don't retry forever
         }
 
+        // ---- Idempotency guard ----
+        // Already in terminal state with the same plisio status → no-op.
+        const terminal = req.status === "approved" || req.status === "rejected";
+        if (terminal && req.plisio_status === status) {
+          console.log(`Plisio webhook ignored (already ${req.status}/${status}) txn=${txnId}`);
+          return new Response("ok (dup)", { status: 200 });
+        }
+
         // Persist latest plisio status for admin visibility
         await (supabaseAdmin as any).from("upgrade_requests")
           .update({ plisio_status: status, plisio_invoice_id: txnId })
@@ -78,24 +86,33 @@ export const Route = createFileRoute("/api/public/plisio-webhook")({
         // Auto-approve on completion (covers both completed & mismatched-overpay)
         const success = status === "completed" || status === "mismatch";
         if (success && req.status !== "approved") {
-          await (supabaseAdmin as any).from("upgrade_requests")
+          // Conditional update guarantees we only flip pending → approved once,
+          // even under concurrent webhook retries.
+          const { data: flipped } = await (supabaseAdmin as any)
+            .from("upgrade_requests")
             .update({
               status: "approved",
               reviewed_at: new Date().toISOString(),
               note: `Auto-approved by Plisio (${status})`,
             })
-            .eq("id", req.id);
-          await (supabaseAdmin as any).from("profiles")
-            .update({ plan_slug: req.package_slug })
-            .eq("id", req.user_id);
+            .eq("id", req.id)
+            .neq("status", "approved")
+            .select("id")
+            .maybeSingle();
+
+          if (flipped) {
+            await (supabaseAdmin as any).from("profiles")
+              .update({ plan_slug: req.package_slug })
+              .eq("id", req.user_id);
+          }
         } else if ((status === "cancelled" || status === "error" || status === "expired") &&
                    req.status === "pending") {
           await (supabaseAdmin as any).from("upgrade_requests")
             .update({ status: "rejected", note: `Plisio: ${status}` })
-            .eq("id", req.id);
+            .eq("id", req.id)
+            .eq("status", "pending");
         }
 
-        // Quiet hash sanity log for ops (helps confirm format on first real callback)
         const sanity = createHash("sha1").update(txnId).digest("hex").slice(0, 8);
         console.log(`Plisio webhook handled txn=${txnId} status=${status} sig=${sanity}`);
 
