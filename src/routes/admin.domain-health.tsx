@@ -11,8 +11,8 @@ import { listDomainHealth, runDomainHealthCheck } from "@/lib/domain-health.func
 
 export const Route = createFileRoute("/admin/domain-health")({
   beforeLoad: async ({ location }) => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/login", search: { redirect: location.href } });
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) throw redirect({ to: "/login", search: { redirect: location.href } });
   },
   component: AdminDomainHealthPage,
 });
