@@ -142,27 +142,8 @@ export const getMyPlan = createServerFn({ method: "GET" })
 export const requestUpgrade = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => UpgradeRequestSchema.parse(i))
-  .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: pkg } = await (supabase as any)
-      .from("packages")
-      .select("price_monthly,price_onetime,billing_period,is_active")
-      .eq("slug", data.package_slug)
-      .single();
-    if (!pkg || !pkg.is_active) throw new Error("Package not available");
-    const amount = pkg.billing_period === "lifetime" || Number(pkg.price_onetime) > 0
-      ? pkg.price_onetime
-      : pkg.price_monthly;
-    const { error } = await (supabase as any).from("upgrade_requests").insert({
-      user_id: userId,
-      package_slug: data.package_slug,
-      payment_method: data.payment_method,
-      transaction_ref: data.transaction_ref ?? null,
-      amount,
-      note: data.note ?? null,
-    });
-    if (error) throw new Error(error.message);
-    return { ok: true };
+  .handler(async () => {
+    throw new Error("Manual upgrade requests are disabled. Please use automatic Plisio checkout.");
   });
 
 export const listMyUpgradeRequests = createServerFn({ method: "GET" })
