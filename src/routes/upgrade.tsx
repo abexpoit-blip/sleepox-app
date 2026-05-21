@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { requireClientUser } from "@/lib/auth-guard";
+import { supabase } from "@/integrations/supabase/client";
 
 const FEE_PCT = 0.02;
 const EXPIRY_MS = 30 * 60 * 1000;
@@ -76,9 +77,25 @@ function UpgradePage() {
   const totalAmount = Math.round(basePrice * (1 + FEE_PCT) * 100) / 100;
 
   const plisioM = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!picked) throw new Error("Choose a package first");
-      return payWithPlisio({ data: { package_slug: picked.slug } });
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw new Error("Please login again before payment.");
+
+      let { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session?.access_token || (sessionData.session.expires_at && sessionData.session.expires_at * 1000 - Date.now() < 5 * 60_000)) {
+        const refreshed = await supabase.auth.refreshSession();
+        if (refreshed.error || !refreshed.data.session?.access_token) throw new Error("Please login again before payment.");
+        sessionData = refreshed.data;
+      }
+
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Please login again before payment.");
+
+      return payWithPlisio({
+        data: { package_slug: picked.slug },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
     },
     onSuccess: (res: any) => {
       if (res?.invoice_url) {

@@ -14,13 +14,14 @@ export const createPlisioInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => CreateInvoiceSchema.parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const apiKey = process.env.PLISIO_API_KEY;
     if (!apiKey) throw new Error("Plisio is not configured. Admin must add PLISIO_API_KEY.");
 
     // 1) Load the package
-    const { data: pkg, error: pkgErr } = await (supabase as any)
+    const { data: pkg, error: pkgErr } = await (supabaseAdmin as any)
       .from("packages")
       .select("slug,name,price_monthly,price_onetime,billing_period,is_active")
       .eq("slug", data.package_slug)
@@ -36,12 +37,12 @@ export const createPlisioInvoice = createServerFn({ method: "POST" })
     const totalAmount = Math.round(baseAmount * (1 + FEE_PCT) * 100) / 100;
 
     // 2) Load buyer email
-    const { data: profile } = await (supabase as any)
+    const { data: profile } = await (supabaseAdmin as any)
       .from("profiles").select("email").eq("id", userId).single();
 
     // 3) Insert pending upgrade_request first (so webhook can find it)
     const orderNumber = `up_${userId.slice(0, 8)}_${Date.now()}`;
-    const { data: reqRow, error: insErr } = await (supabase as any)
+    const { data: reqRow, error: insErr } = await (supabaseAdmin as any)
       .from("upgrade_requests")
       .insert({
         user_id: userId,
@@ -67,6 +68,7 @@ export const createPlisioInvoice = createServerFn({ method: "POST" })
       api_key: apiKey,
       source_amount: totalAmount.toFixed(2),
       source_currency: "USD",
+      currency: "BTC",
       order_name: `${pkg.name} — ${data.package_slug}`,
       order_number: orderNumber,
       callback_url: callbackUrl,
@@ -81,8 +83,15 @@ export const createPlisioInvoice = createServerFn({ method: "POST" })
 
     if (!res.ok || payload?.status !== "success" || !payload?.data?.invoice_url) {
       const msg = payload?.data?.message || payload?.message || `Plisio error (${res.status})`;
+      console.warn("Plisio invoice create failed", {
+        status: res.status,
+        message: msg,
+        orderNumber,
+        apiKeyLength: apiKey.length,
+        apiKeyPrefix: apiKey.slice(0, 4),
+      });
       // Mark the request failed so admin can see it
-      await (supabase as any).from("upgrade_requests")
+      await (supabaseAdmin as any).from("upgrade_requests")
         .update({ plisio_status: "error", note: msg }).eq("id", reqRow.id);
       throw new Error(msg);
     }
@@ -90,7 +99,7 @@ export const createPlisioInvoice = createServerFn({ method: "POST" })
     const invoiceUrl = String(payload.data.invoice_url);
     const txnId = String(payload.data.txn_id ?? "");
 
-    await (supabase as any).from("upgrade_requests")
+    await (supabaseAdmin as any).from("upgrade_requests")
       .update({ plisio_invoice_id: txnId, plisio_invoice_url: invoiceUrl })
       .eq("id", reqRow.id);
 
