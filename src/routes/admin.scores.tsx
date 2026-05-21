@@ -1,4 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Activity, Play, TrendingUp, Pause } from "lucide-react";
@@ -54,6 +55,9 @@ function scoreColor(score: number | null) {
 }
 
 function AdminScoresPage() {
+  const fetchScores = useServerFn(listLinkScores);
+  const fetchVariantTests = useServerFn(listVariantTests);
+  const runAutopilot = useServerFn(runAutopilotNow);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [scores, setScores] = useState<ScoreRow[]>([]);
@@ -63,8 +67,8 @@ function AdminScoresPage() {
     setLoading(true);
     try {
       const [s, v] = await Promise.all([
-        listLinkScores({ data: { limit: 100 } }),
-        listVariantTests({ data: { limit: 200 } }),
+        fetchScores({ data: { limit: 100 } }),
+        fetchVariantTests({ data: { limit: 200 } }),
       ]);
       setScores(s.rows as ScoreRow[]);
       setVariants(v.rows as VariantRow[]);
@@ -82,7 +86,7 @@ function AdminScoresPage() {
   const handleRun = async () => {
     setRunning(true);
     try {
-      const res = await runAutopilotNow();
+      const res = await runAutopilot();
       toast.success(
         `Updated ${res.scores.updated} scores, ${res.variants.evaluated} variants (${res.variants.paused} paused)`,
       );
