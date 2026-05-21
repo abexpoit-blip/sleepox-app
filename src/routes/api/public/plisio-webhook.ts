@@ -49,6 +49,14 @@ export const Route = createFileRoute("/api/public/plisio-webhook")({
           console.warn("Plisio webhook hash mismatch", {
             txn: payload.txn_id, expectedJson, expectedForm, got: verifyHash,
           });
+          await (supabaseAdmin as any).from("plisio_webhook_logs").insert({
+            txn_id: String(payload.txn_id ?? ""),
+            order_number: String(payload.order_number ?? ""),
+            status: String(payload.status ?? ""),
+            signature_valid: false,
+            payload,
+            note: "Rejected: signature mismatch",
+          });
           return new Response("invalid signature", { status: 401 });
         }
 
