@@ -1,14 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Check, Sparkles, Rocket } from "lucide-react";
+import { Check, Sparkles, Rocket, Copy, ExternalLink, Clock, ShieldCheck, Bitcoin } from "lucide-react";
 import {
   getMyPlan,
   requestUpgrade,
   listMyUpgradeRequests,
-  getPublicPaymentSettings,
 } from "@/lib/billing.functions";
 import { createPlisioInvoice } from "@/lib/plisio.functions";
 import { Button } from "@/components/ui/button";
@@ -18,23 +17,44 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
 import { requireClientUser } from "@/lib/auth-guard";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+const FEE_PCT = 0.02;
+const EXPIRY_MS = 30 * 60 * 1000;
 
 export const Route = createFileRoute("/upgrade")({
   beforeLoad: ({ location }) => requireClientUser(location.href),
   component: UpgradePage,
 });
 
+function copy(value: string, label = "Copied") {
+  navigator.clipboard.writeText(value).then(
+    () => toast.success(`${label} to clipboard`),
+    () => toast.error("Could not copy"),
+  );
+}
+
+function Countdown({ createdAt }: { createdAt: string }) {
+  const end = new Date(createdAt).getTime() + EXPIRY_MS;
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const remaining = Math.max(0, end - now);
+  if (remaining === 0) return <Badge variant="destructive" className="gap-1"><Clock className="h-3 w-3" /> Expired</Badge>;
+  const m = Math.floor(remaining / 60000);
+  const s = Math.floor((remaining % 60000) / 1000).toString().padStart(2, "0");
+  return <Badge variant="outline" className="gap-1 border-amber-500/40 text-amber-600 dark:text-amber-400"><Clock className="h-3 w-3" /> {m}:{s} left</Badge>;
+}
+
 function UpgradePage() {
   const qc = useQueryClient();
   const mine = useServerFn(getMyPlan);
   const myReqs = useServerFn(listMyUpgradeRequests);
   const submit = useServerFn(requestUpgrade);
-  void useServerFn(getPublicPaymentSettings); // kept for future admin-instructions toggle
   const payWithPlisio = useServerFn(createPlisioInvoice);
 
   const { data: pkgs = [], isLoading: packagesLoading, error: packagesError } = useQuery({
@@ -49,11 +69,25 @@ function UpgradePage() {
     },
   });
   const { data: plan } = useQuery({ queryKey: ["my-plan"], queryFn: () => mine() });
-  const { data: requests = [] } = useQuery({ queryKey: ["my-upgrade-requests"], queryFn: () => myReqs() });
+  const { data: requests = [] } = useQuery({
+    queryKey: ["my-upgrade-requests"],
+    queryFn: () => myReqs(),
+    refetchInterval: 15000,
+  });
 
   const [picked, setPicked] = useState<any | null>(null);
   const [txRef, setTxRef] = useState("");
   const [note, setNote] = useState("");
+
+  const basePrice = picked
+    ? Number(
+        picked?.billing_period === "lifetime" || Number(picked?.price_onetime) > 0
+          ? picked.price_onetime
+          : picked.price_monthly,
+      ) || 0
+    : 0;
+  const feeAmount = Math.round(basePrice * FEE_PCT * 100) / 100;
+  const totalAmount = Math.round(basePrice * (1 + FEE_PCT) * 100) / 100;
 
   const reqM = useMutation({
     mutationFn: () => {
@@ -170,45 +204,111 @@ function UpgradePage() {
             <p className="text-sm text-muted-foreground">No upgrade requests yet.</p>
           ) : (
             <div className="space-y-2">
-              {requests.map((r: any) => (
-                <div key={r.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
-                  <div>
-                    <div className="font-medium">{r.package_slug} · ${Number(r.amount ?? 0).toFixed(2)}</div>
-                    <div className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()} · {r.payment_method}</div>
+              {requests.map((r: any) => {
+                const isPlisio = r.payment_method === "plisio";
+                const isPending = r.status === "pending" && r.plisio_status !== "completed";
+                const ageMs = Date.now() - new Date(r.created_at).getTime();
+                const expired = isPlisio && isPending && ageMs > EXPIRY_MS;
+                return (
+                  <div key={r.id} className="flex flex-col gap-2 rounded-lg border p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2 font-medium">
+                        {r.package_slug} · ${Number(r.amount ?? 0).toFixed(2)}
+                        {isPlisio && <Badge variant="outline" className="gap-1"><Bitcoin className="h-3 w-3" /> Crypto</Badge>}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(r.created_at).toLocaleString()}
+                        {r.transaction_ref && <> · <code className="rounded bg-muted px-1">{r.transaction_ref}</code></>}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isPlisio && isPending && !expired && <Countdown createdAt={r.created_at} />}
+                      {expired && <Badge variant="destructive" className="gap-1"><Clock className="h-3 w-3" /> Expired</Badge>}
+                      {r.plisio_invoice_url && isPending && !expired && (
+                        <Button size="sm" variant="outline" asChild>
+                          <a href={r.plisio_invoice_url} target="_blank" rel="noreferrer" className="gap-1">
+                            <ExternalLink className="h-3 w-3" /> Pay now
+                          </a>
+                        </Button>
+                      )}
+                      <Badge variant={r.status === "approved" ? "default" : r.status === "rejected" ? "destructive" : "outline"}>
+                        {r.status === "approved" ? "✓ Successful" : r.status}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge variant={r.status === "approved" ? "default" : r.status === "rejected" ? "destructive" : "outline"}>{r.status}</Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={!!picked} onOpenChange={(o) => !o && setPicked(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Request {picked?.name}</DialogTitle>
-            <DialogDescription>
-              Pay instantly with crypto (BTC, LTC, USDT) via Plisio — your plan activates automatically once the payment is confirmed on-chain. Or submit a manual transaction reference for admin review.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
+        <DialogContent className="overflow-hidden p-0 sm:max-w-lg">
+          {/* Premium gradient header */}
+          <div className="relative bg-gradient-to-br from-primary/20 via-primary/5 to-transparent p-6 pb-4">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.15),transparent_60%)]" />
+            <DialogHeader className="relative">
+              <DialogTitle className="flex items-center gap-2 text-2xl">
+                <Sparkles className="h-6 w-6 text-primary" /> {picked?.name}
+              </DialogTitle>
+              <DialogDescription>
+                Pay instantly with crypto — your plan activates automatically once confirmed on-chain.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="space-y-4 p-6 pt-2">
+            {/* Price breakdown */}
+            <div className="rounded-xl border bg-muted/40 p-4 text-sm">
+              <div className="flex justify-between"><span className="text-muted-foreground">Package price</span><span>${basePrice.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Network fee (2%)</span><span>${feeAmount.toFixed(2)}</span></div>
+              <div className="mt-2 flex items-end justify-between border-t pt-2">
+                <span className="font-medium">You pay</span>
+                <span className="text-2xl font-bold text-primary">${totalAmount.toFixed(2)}</span>
+              </div>
+              <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
+                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Send the exact total above to the wallet shown on Plisio. Underpayment will not auto-approve.
+              </p>
+            </div>
+
             <Button
-              className="w-full"
+              size="lg"
+              className="h-12 w-full bg-gradient-to-r from-primary to-primary/80 text-base font-semibold shadow-lg hover:opacity-95"
               onClick={() => plisioM.mutate()}
               disabled={plisioM.isPending}
             >
-              {plisioM.isPending ? "Creating invoice…" : `Pay with Crypto — $${Number((picked?.billing_period === "lifetime" || Number(picked?.price_onetime) > 0) ? picked?.price_onetime : picked?.price_monthly ?? 0).toFixed(2)}`}
+              <Bitcoin className="mr-2 h-5 w-5" />
+              {plisioM.isPending ? "Creating invoice…" : `Pay $${totalAmount.toFixed(2)} with Crypto`}
             </Button>
-            <div className="relative my-2 text-center text-xs uppercase text-muted-foreground">
-              <span className="bg-background px-2">or submit manually</span>
-            </div>
-            <div><Label>Transaction reference (optional)</Label><Input value={txRef} onChange={(e) => setTxRef(e.target.value)} placeholder="TXID / external invoice id" /></div>
-            <div><Label>Note for admin (optional)</Label><Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} /></div>
+
+            <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" /> Invoice expires in 30 minutes · BTC, LTC, USDT, USDT-TRC20
+            </p>
+
+            <details className="group rounded-lg border">
+              <summary className="cursor-pointer list-none p-3 text-sm font-medium text-muted-foreground transition hover:text-foreground">
+                Have a manual transaction? Submit for admin review →
+              </summary>
+              <div className="space-y-3 border-t p-3">
+                <div>
+                  <Label>Transaction reference</Label>
+                  <div className="flex gap-2">
+                    <Input value={txRef} onChange={(e) => setTxRef(e.target.value)} placeholder="TXID / external invoice id" />
+                    {txRef && <Button type="button" variant="outline" size="icon" onClick={() => copy(txRef, "TXID")}><Copy className="h-4 w-4" /></Button>}
+                  </div>
+                </div>
+                <div><Label>Note for admin</Label><Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} /></div>
+                <Button variant="outline" className="w-full" onClick={() => reqM.mutate()} disabled={reqM.isPending}>
+                  Submit manual request
+                </Button>
+              </div>
+            </details>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setPicked(null)}>Cancel</Button>
-            <Button variant="outline" onClick={() => reqM.mutate()} disabled={reqM.isPending}>Submit manual request</Button>
+
+          <DialogFooter className="border-t bg-muted/30 px-6 py-3">
+            <Button variant="ghost" size="sm" onClick={() => setPicked(null)}>Cancel</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
