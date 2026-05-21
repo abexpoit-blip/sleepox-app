@@ -1,4 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Plus, Trash2, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -59,6 +60,10 @@ function daysFromMask(mask: number) {
 
 function TimeRulesPage() {
   const { linkId } = Route.useParams();
+  const fetchTimeRules = useServerFn(listTimeRules);
+  const createTimeRule = useServerFn(addTimeRule);
+  const setTimeRuleActive = useServerFn(toggleTimeRule);
+  const removeTimeRule = useServerFn(deleteTimeRule);
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
 
@@ -76,7 +81,7 @@ function TimeRulesPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await listTimeRules({ data: { linkId } });
+      const res = await fetchTimeRules({ data: { linkId } });
       setRows(res.rows as Row[]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to load");
@@ -91,7 +96,7 @@ function TimeRulesPage() {
     if (mask === 0) return toast.error("কমপক্ষে একটা day select করুন");
     setAdding(true);
     try {
-      await addTimeRule({
+      await createTimeRule({
         data: {
           linkId,
           days_mask: mask,
@@ -223,13 +228,13 @@ function TimeRulesPage() {
                     <Switch
                       checked={r.is_active}
                       onCheckedChange={async (v) => {
-                        await toggleTimeRule({ data: { id: r.id, is_active: v } });
+                        await setTimeRuleActive({ data: { id: r.id, is_active: v } });
                         load();
                       }}
                     />
                     <Button variant="ghost" size="icon" onClick={async () => {
                       if (!confirm("Delete this rule?")) return;
-                      await deleteTimeRule({ data: { id: r.id } });
+                      await removeTimeRule({ data: { id: r.id } });
                       load();
                     }}>
                       <Trash2 className="w-4 h-4 text-destructive" />
