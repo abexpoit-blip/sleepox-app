@@ -89,9 +89,12 @@ function UpgradePage() {
         sessionData = refreshed.data;
       }
 
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Please login again before payment.");
+
       return payWithPlisio({
         data: { package_slug: picked.slug },
-        headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
     },
     onSuccess: (res: any) => {
