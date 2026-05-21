@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Plus, Trash2, Save, Shield, Upload, Image as ImageIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -6,12 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { requireClientUser } from "@/lib/auth-guard";
 
 export const Route = createFileRoute("/links/$linkId/settings")({
-  beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/login", search: { redirect: location.href } });
-  },
+  beforeLoad: ({ location }) => requireClientUser(location.href),
   component: LinkSettingsPage,
 });
 

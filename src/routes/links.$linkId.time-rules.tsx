@@ -1,9 +1,10 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Plus, Trash2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { requireClientUser } from "@/lib/auth-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,10 +19,7 @@ import {
 } from "@/lib/time-rules.functions";
 
 export const Route = createFileRoute("/links/$linkId/time-rules")({
-  beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/login", search: { redirect: location.href } });
-  },
+  beforeLoad: ({ location }) => requireClientUser(location.href),
   component: TimeRulesPage,
 });
 

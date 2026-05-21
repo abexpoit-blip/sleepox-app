@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -46,6 +46,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { requireClientUser } from "@/lib/auth-guard";
 import { withFreshSupabaseAuth } from "@/lib/supabase-retry";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -72,10 +73,7 @@ export const Route = createFileRoute("/dashboard")({
     ],
     links: [{ rel: "canonical", href: "https://sleepox.com/dashboard" }],
   }),
-  beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/login", search: { redirect: location.href } });
-  },
+  beforeLoad: ({ location }) => requireClientUser(location.href),
   component: Dashboard,
 });
 
