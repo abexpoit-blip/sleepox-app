@@ -633,12 +633,13 @@ function KpiCard({
   accent: string;
 }) {
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-        <span className="text-muted-foreground">{icon}</span>
+    <Card className="relative overflow-hidden p-4 border-border/40 bg-gradient-to-br from-card/80 via-card/50 to-card/30 backdrop-blur-xl shadow-[0_8px_32px_-12px_oklch(0.20_0.08_240/0.6)] hover:shadow-[0_12px_40px_-8px_oklch(0.78_0.15_220/0.4)] hover:border-primary/30 transition-all duration-300 group">
+      <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+      <div className="relative flex items-center justify-between mb-2">
+        <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-semibold">{label}</span>
+        <span className="text-primary/70 group-hover:text-primary transition-colors">{icon}</span>
       </div>
-      <div className={`text-3xl font-bold ${accent}`}>{value}</div>
+      <div className={`relative text-3xl font-bold tabular-nums ${accent} drop-shadow-sm`}>{value}</div>
     </Card>
   );
 }
