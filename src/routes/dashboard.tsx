@@ -184,13 +184,13 @@ function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range, refreshTick]);
 
-  // Auto-refresh only while the tab is visible; keep it lightweight.
+  // Auto-refresh only while the tab is visible; keep stats near real-time.
   useEffect(() => {
     if (!autoRefresh) return;
     const id = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       setRefreshTick((t) => t + 1);
-    }, 60_000);
+    }, 15_000);
     return () => clearInterval(id);
   }, [autoRefresh]);
 
@@ -369,7 +369,7 @@ function Dashboard() {
                   <>
                     <span className={`flex h-1.5 w-1.5 rounded-full ${autoRefresh ? "bg-success animate-pulse" : "bg-muted-foreground/50"}`} />
                     <span>
-                      {autoRefresh ? "Auto · 30s" : "Paused"}
+                      {autoRefresh ? "Auto · 15s" : "Paused"}
                     </span>
                   </>
                 )}
