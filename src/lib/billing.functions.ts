@@ -171,7 +171,7 @@ export const listMyUpgradeRequests = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data, error } = await (supabase as any)
       .from("upgrade_requests")
-      .select("id,package_slug,status,amount,payment_method,transaction_ref,note,created_at,reviewed_at")
+      .select("id,package_slug,status,amount,payment_method,transaction_ref,note,created_at,reviewed_at,plisio_status,plisio_invoice_url,plisio_invoice_id")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
