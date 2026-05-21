@@ -79,6 +79,22 @@ function UpgradePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const plisioM = useMutation({
+    mutationFn: () => {
+      if (!picked) throw new Error("Choose a package first");
+      return payWithPlisio({ data: { package_slug: picked.slug } });
+    },
+    onSuccess: (res: any) => {
+      if (res?.invoice_url) {
+        toast.success("Redirecting to crypto checkout…");
+        window.location.href = res.invoice_url;
+      } else {
+        toast.error("Could not create invoice");
+      }
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const visible = pkgs.filter((p: any) => p.is_active);
 
   return (
