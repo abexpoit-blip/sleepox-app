@@ -639,6 +639,10 @@ function LinkMonitorPage() {
           </div>
         </Card>
 
+        <BotInsightsSection linkId={linkId} days={days} />
+
+
+
         <p className="text-xs text-muted-foreground text-center pt-4">
           <Link to="/analytics" search={{ days, linkId: "all" }} className="hover:text-primary">
             ← Back to all analytics
