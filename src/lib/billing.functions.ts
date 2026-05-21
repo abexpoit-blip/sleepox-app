@@ -80,6 +80,13 @@ export const createPackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => PackageCreateSchema.parse(i))
   .handler(async ({ data, context }) => {
+    const { data: role } = await (context.supabase as any)
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!role) throw new Error("Unauthorized: Admin access required");
     const { error } = await (context.supabase as any).from("packages").insert(data);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -89,6 +96,13 @@ export const updatePackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => PackageUpdateSchema.parse(i))
   .handler(async ({ data, context }) => {
+    const { data: role } = await (context.supabase as any)
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!role) throw new Error("Unauthorized: Admin access required");
     const { id, ...patch } = data;
     const { error } = await (context.supabase as any).from("packages").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
@@ -99,6 +113,13 @@ export const deletePackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => IdSchema.parse(i))
   .handler(async ({ data, context }) => {
+    const { data: role } = await (context.supabase as any)
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!role) throw new Error("Unauthorized: Admin access required");
     const { error } = await (context.supabase as any).from("packages").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
