@@ -150,6 +150,7 @@ function AnalyticsPage() {
   const { days, linkId } = Route.useSearch();
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
   const toggleSeries = (key: string) =>
     setHidden((h) => ({ ...h, [key]: !h[key] }));
@@ -159,20 +160,41 @@ function AnalyticsPage() {
   const setLinkId = (id: string) =>
     navigate({ to: "/analytics", search: (prev: AnalyticsSearch) => ({ ...prev, linkId: id }), replace: true });
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetchAnalytics({
         data: { days, linkId: linkId === "all" ? null : linkId },
       });
       setData(res);
+      setLastUpdated(new Date());
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
+  // Initial + filter-change load
   useEffect(() => {
     void load(); /* eslint-disable-next-line */
+  }, [days, linkId]);
+
+  // Live auto-refresh every 15s (only when tab visible)
+  useEffect(() => {
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        void load(true);
+      }
+    };
+    const id = setInterval(tick, 15_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") void load(true);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+    /* eslint-disable-next-line */
   }, [days, linkId]);
 
   const t = data?.totals;
