@@ -35,6 +35,7 @@ function UpgradePage() {
   const myReqs = useServerFn(listMyUpgradeRequests);
   const submit = useServerFn(requestUpgrade);
   const getSettings = useServerFn(getPublicPaymentSettings);
+  const payWithPlisio = useServerFn(createPlisioInvoice);
 
   const { data: pkgs = [], isLoading: packagesLoading, error: packagesError } = useQuery({
     queryKey: ["packages-active"],
