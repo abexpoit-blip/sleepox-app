@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Activity, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
@@ -57,6 +58,7 @@ function scoreClass(s: number | null) {
 }
 
 function AdminClicksPage() {
+  const fetchClicks = useServerFn(listRecentClicks);
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -71,7 +73,7 @@ function AdminClicksPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await listRecentClicks({
+      const res = await fetchClicks({
         data: {
           limit,
           sinceHours,
