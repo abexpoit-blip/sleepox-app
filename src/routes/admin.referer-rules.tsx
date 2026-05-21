@@ -1,4 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2, Filter } from "lucide-react";
@@ -49,6 +50,10 @@ const ACTION_LABEL: Record<Action, { label: string; tone: string; desc: string }
 };
 
 function AdminRefererRulesPage() {
+  const fetchRules = useServerFn(listRefererRules);
+  const createRule = useServerFn(addRefererRule);
+  const setRuleActive = useServerFn(toggleRefererRule);
+  const removeRule = useServerFn(deleteRefererRule);
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
 
@@ -61,7 +66,7 @@ function AdminRefererRulesPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await listRefererRules();
+      const res = await fetchRules();
       const sorted = [...(res.rows as Row[])].sort(
         (a, b) => a.priority - b.priority || a.host_pattern.localeCompare(b.host_pattern),
       );
@@ -86,7 +91,7 @@ function AdminRefererRulesPage() {
 
     setAdding(true);
     try {
-      await addRefererRule({
+      await createRule({
         data: {
           host_pattern: h,
           action,
@@ -108,7 +113,7 @@ function AdminRefererRulesPage() {
 
   const handleToggle = async (id: string, next: boolean) => {
     try {
-      await toggleRefererRule({ data: { id, is_active: next } });
+      await setRuleActive({ data: { id, is_active: next } });
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, is_active: next } : r)));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -118,7 +123,7 @@ function AdminRefererRulesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Rule delete করবেন?")) return;
     try {
-      await deleteRefererRule({ data: { id } });
+      await removeRule({ data: { id } });
       setRows((prev) => prev.filter((r) => r.id !== id));
       toast.success("Deleted");
     } catch (e) {
