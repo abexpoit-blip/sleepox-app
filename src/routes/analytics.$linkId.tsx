@@ -34,6 +34,7 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { getLinkMonitor } from "@/lib/link-monitor.functions";
+import { getLinkBotInsights } from "@/lib/link-insights.functions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
