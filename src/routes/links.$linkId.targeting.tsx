@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Plus, Trash2, Globe, Smartphone, Shield } from "lucide-react";
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { requireClientUser } from "@/lib/auth-guard";
 import {
   getTargetingState,
   upsertGeoRule,
@@ -25,10 +26,7 @@ import {
 } from "@/lib/targeting.functions";
 
 export const Route = createFileRoute("/links/$linkId/targeting")({
-  beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/login", search: { redirect: location.href } });
-  },
+  beforeLoad: ({ location }) => requireClientUser(location.href),
   component: TargetingPage,
 });
 

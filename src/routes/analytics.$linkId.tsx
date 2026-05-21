@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -33,6 +33,7 @@ import {
   Legend,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { requireClientUser } from "@/lib/auth-guard";
 import { getLinkMonitor } from "@/lib/link-monitor.functions";
 import { getLinkBotInsights } from "@/lib/link-insights.functions";
 import { Button } from "@/components/ui/button";
@@ -64,10 +65,7 @@ export const Route = createFileRoute("/analytics/$linkId")({
     }
     return { days };
   },
-  beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/login", search: { redirect: location.href } });
-  },
+  beforeLoad: ({ location }) => requireClientUser(location.href),
   component: LinkMonitorPage,
 });
 

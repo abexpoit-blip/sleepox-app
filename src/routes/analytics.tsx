@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useServerFn } from "@tanstack/react-start";
@@ -33,6 +33,7 @@ import {
   Legend,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { requireClientUser } from "@/lib/auth-guard";
 import { getAnalytics } from "@/lib/analytics.functions";
 import {
   CountryFlag,
@@ -84,10 +85,7 @@ export const Route = createFileRoute("/analytics")({
     const linkId = typeof s.linkId === "string" && s.linkId ? s.linkId : "all";
     return { days, linkId };
   },
-  beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/login", search: { redirect: location.href } });
-  },
+  beforeLoad: ({ location }) => requireClientUser(location.href),
   component: AnalyticsPage,
 });
 
