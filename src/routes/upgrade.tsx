@@ -34,7 +34,7 @@ function UpgradePage() {
   const mine = useServerFn(getMyPlan);
   const myReqs = useServerFn(listMyUpgradeRequests);
   const submit = useServerFn(requestUpgrade);
-  const getSettings = useServerFn(getPublicPaymentSettings);
+  void useServerFn(getPublicPaymentSettings); // kept for future admin-instructions toggle
   const payWithPlisio = useServerFn(createPlisioInvoice);
 
   const { data: pkgs = [], isLoading: packagesLoading, error: packagesError } = useQuery({
@@ -50,10 +50,6 @@ function UpgradePage() {
   });
   const { data: plan } = useQuery({ queryKey: ["my-plan"], queryFn: () => mine() });
   const { data: requests = [] } = useQuery({ queryKey: ["my-upgrade-requests"], queryFn: () => myReqs() });
-  const { data: settings } = useQuery({
-    queryKey: ["payment-settings-public"],
-    queryFn: () => getSettings().catch(() => null),
-  });
 
   const [picked, setPicked] = useState<any | null>(null);
   const [txRef, setTxRef] = useState("");
