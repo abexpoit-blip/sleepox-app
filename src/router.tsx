@@ -6,10 +6,12 @@ export const getRouter = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 30_000,
+        // Real-time first: never serve stale stats. Always refetch on mount/focus.
+        staleTime: 0,
         gcTime: 5 * 60_000,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
+        refetchOnMount: "always",
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
         retry: 1,
       },
     },
