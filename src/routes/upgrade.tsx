@@ -10,6 +10,7 @@ import {
   listMyUpgradeRequests,
   getPublicPaymentSettings,
 } from "@/lib/billing.functions";
+import { createPlisioInvoice } from "@/lib/plisio.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,7 +34,8 @@ function UpgradePage() {
   const mine = useServerFn(getMyPlan);
   const myReqs = useServerFn(listMyUpgradeRequests);
   const submit = useServerFn(requestUpgrade);
-  const getSettings = useServerFn(getPublicPaymentSettings);
+  void useServerFn(getPublicPaymentSettings); // kept for future admin-instructions toggle
+  const payWithPlisio = useServerFn(createPlisioInvoice);
 
   const { data: pkgs = [], isLoading: packagesLoading, error: packagesError } = useQuery({
     queryKey: ["packages-active"],
@@ -48,10 +50,6 @@ function UpgradePage() {
   });
   const { data: plan } = useQuery({ queryKey: ["my-plan"], queryFn: () => mine() });
   const { data: requests = [] } = useQuery({ queryKey: ["my-upgrade-requests"], queryFn: () => myReqs() });
-  const { data: settings } = useQuery({
-    queryKey: ["payment-settings-public"],
-    queryFn: () => getSettings().catch(() => null),
-  });
 
   const [picked, setPicked] = useState<any | null>(null);
   const [txRef, setTxRef] = useState("");
@@ -73,6 +71,22 @@ function UpgradePage() {
       toast.success("Request submitted — admin will review shortly");
       setPicked(null); setTxRef(""); setNote("");
       qc.invalidateQueries({ queryKey: ["my-upgrade-requests"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const plisioM = useMutation({
+    mutationFn: () => {
+      if (!picked) throw new Error("Choose a package first");
+      return payWithPlisio({ data: { package_slug: picked.slug } });
+    },
+    onSuccess: (res: any) => {
+      if (res?.invoice_url) {
+        toast.success("Redirecting to crypto checkout…");
+        window.location.href = res.invoice_url;
+      } else {
+        toast.error("Could not create invoice");
+      }
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -175,16 +189,26 @@ function UpgradePage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Request {picked?.name}</DialogTitle>
             <DialogDescription>
-              {settings?.payment_instructions ?? "Send payment via the method described by admin, then submit the transaction reference below."}
+              Pay instantly with crypto (BTC, LTC, USDT) via Plisio — your plan activates automatically once the payment is confirmed on-chain. Or submit a manual transaction reference for admin review.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div><Label>Transaction reference (optional)</Label><Input value={txRef} onChange={(e) => setTxRef(e.target.value)} placeholder="Plisio invoice ID / TXID / bKash txn" /></div>
-            <div><Label>Note for admin (optional)</Label><Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} /></div>
+            <Button
+              className="w-full"
+              onClick={() => plisioM.mutate()}
+              disabled={plisioM.isPending}
+            >
+              {plisioM.isPending ? "Creating invoice…" : `Pay with Crypto — $${Number((picked?.billing_period === "lifetime" || Number(picked?.price_onetime) > 0) ? picked?.price_onetime : picked?.price_monthly ?? 0).toFixed(2)}`}
+            </Button>
+            <div className="relative my-2 text-center text-xs uppercase text-muted-foreground">
+              <span className="bg-background px-2">or submit manually</span>
+            </div>
+            <div><Label>Transaction reference (optional)</Label><Input value={txRef} onChange={(e) => setTxRef(e.target.value)} placeholder="TXID / external invoice id" /></div>
+            <div><Label>Note for admin (optional)</Label><Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} /></div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setPicked(null)}>Cancel</Button>
-            <Button onClick={() => reqM.mutate()} disabled={reqM.isPending}>Submit request</Button>
+            <Button variant="outline" onClick={() => reqM.mutate()} disabled={reqM.isPending}>Submit manual request</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -875,6 +875,9 @@ export type Database = {
           note: string | null
           package_slug: string
           payment_method: string
+          plisio_invoice_id: string | null
+          plisio_invoice_url: string | null
+          plisio_status: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -888,6 +891,9 @@ export type Database = {
           note?: string | null
           package_slug: string
           payment_method?: string
+          plisio_invoice_id?: string | null
+          plisio_invoice_url?: string | null
+          plisio_status?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -901,6 +907,9 @@ export type Database = {
           note?: string | null
           package_slug?: string
           payment_method?: string
+          plisio_invoice_id?: string | null
+          plisio_invoice_url?: string | null
+          plisio_status?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
