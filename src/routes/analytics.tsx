@@ -150,6 +150,7 @@ function AnalyticsPage() {
   const { days, linkId } = Route.useSearch();
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
   const toggleSeries = (key: string) =>
     setHidden((h) => ({ ...h, [key]: !h[key] }));
@@ -159,20 +160,41 @@ function AnalyticsPage() {
   const setLinkId = (id: string) =>
     navigate({ to: "/analytics", search: (prev: AnalyticsSearch) => ({ ...prev, linkId: id }), replace: true });
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetchAnalytics({
         data: { days, linkId: linkId === "all" ? null : linkId },
       });
       setData(res);
+      setLastUpdated(new Date());
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
+  // Initial + filter-change load
   useEffect(() => {
     void load(); /* eslint-disable-next-line */
+  }, [days, linkId]);
+
+  // Live auto-refresh every 15s (only when tab visible)
+  useEffect(() => {
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        void load(true);
+      }
+    };
+    const id = setInterval(tick, 15_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") void load(true);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+    /* eslint-disable-next-line */
   }, [days, linkId]);
 
   const t = data?.totals;
@@ -180,11 +202,23 @@ function AnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-card/40 backdrop-blur sticky top-0 z-10">
-        <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between gap-4">
+      <header className="border-b border-border/40 bg-gradient-to-b from-card/60 to-card/20 backdrop-blur-xl sticky top-0 z-10 shadow-[0_4px_24px_-12px_oklch(0.78_0.15_220/0.3)]">
+        <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <Shield className="h-6 w-6 text-primary" aria-hidden="true" />
+            <Shield className="h-6 w-6 text-primary drop-shadow-[0_0_8px_oklch(0.78_0.15_220/0.6)]" aria-hidden="true" />
             <h1 className="font-bold tracking-tight text-lg">LinkShield Analytics</h1>
+            <span className="hidden md:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-400 ring-1 ring-emerald-500/30">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              </span>
+              Live
+            </span>
+            {lastUpdated && (
+              <span className="hidden md:inline text-[11px] text-muted-foreground tabular-nums">
+                Updated {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
@@ -212,7 +246,7 @@ function AnalyticsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon" onClick={load} disabled={loading} aria-label="Refresh analytics">
+            <Button variant="outline" size="icon" onClick={() => void load()} disabled={loading} aria-label="Refresh analytics">
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
             </Button>
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/funnel" })}>
@@ -599,12 +633,13 @@ function KpiCard({
   accent: string;
 }) {
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-        <span className="text-muted-foreground">{icon}</span>
+    <Card className="relative overflow-hidden p-4 border-border/40 bg-gradient-to-br from-card/80 via-card/50 to-card/30 backdrop-blur-xl shadow-[0_8px_32px_-12px_oklch(0.20_0.08_240/0.6)] hover:shadow-[0_12px_40px_-8px_oklch(0.78_0.15_220/0.4)] hover:border-primary/30 transition-all duration-300 group">
+      <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+      <div className="relative flex items-center justify-between mb-2">
+        <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-semibold">{label}</span>
+        <span className="text-primary/70 group-hover:text-primary transition-colors">{icon}</span>
       </div>
-      <div className={`text-3xl font-bold ${accent}`}>{value}</div>
+      <div className={`relative text-3xl font-bold tabular-nums ${accent} drop-shadow-sm`}>{value}</div>
     </Card>
   );
 }
